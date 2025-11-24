@@ -262,7 +262,6 @@ const getMediaUrl = (url) => {
 
 <style scoped>
 .chat-window {
-  width: 70%;
   flex: 1;
   display: flex;
   flex-direction: column;

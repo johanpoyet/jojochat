@@ -51,7 +51,7 @@ html, body {
 #app {
   height: 100vh;
   width: 100vw;
-  overflow: hidden;
+  /* overflow: hidden; */
   position: fixed;
   top: 0;
   left: 0;

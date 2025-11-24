@@ -1,0 +1,106 @@
+name: Deploy Production
+
+on:
+  push:
+    branches: [ main ]
+
+env:
+  NODE_VERSION: 18
+
+jobs:
+  deploy:
+    name: Build and deploy to production
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: ${{ secrets.PROD_API_URL }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      # Pre-deploy validation
+      - name: Install backend deps
+        working-directory: api
+        run: npm ci
+
+      - name: Install frontend deps
+        working-directory: front
+        run: npm ci
+
+      - name: Lint backend
+        working-directory: api
+        run: npm run lint
+
+      - name: Lint frontend
+        working-directory: front
+        run: npm run lint
+
+      - name: Run backend tests
+        env:
+          NODE_ENV: test
+          MONGODB_URI: mongodb://127.0.0.1:27017/deploy_check
+          JWT_SECRET: ${{ secrets.JWT_SECRET_PROD }}
+        run: |
+          docker run -d --name mongo -p 27017:27017 mongo:6
+          sleep 5
+          (cd api && npm test)
+          docker rm -f mongo
+
+      - name: Build frontend
+        working-directory: front
+        run: npm run build
+
+      # Build and push Docker image
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Extract metadata (tags, labels)
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ secrets.DOCKERHUB_USERNAME }}/${{ secrets.IMAGE_NAME }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Platform deploy trigger (webhook or provider CLI)
+      - name: Trigger platform deploy
+        if: success()
+        run: |
+          curl -X POST "$${{ secrets.PROD_DEPLOY_WEBHOOK }}" -H 'Content-Type: application/json' -d '{"image":"${{ steps.meta.outputs.tags }}"}' || true
+
+      # Post-deploy health checks
+      - name: Health check
+        run: |
+          echo "Waiting for app to be ready..."
+          sleep 10
+          curl -f "${{ secrets.PROD_API_URL }}/health" || (echo "Health check failed" && exit 1)
+
+      - name: Notify success
+        if: success()
+        run: echo "Deployment successful for ${{ github.sha }} to production"
+
+      - name: Notify failure
+        if: failure()
+        run: echo "Deployment failed on ${{ github.sha }} to production"
+
+

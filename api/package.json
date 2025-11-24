@@ -1,0 +1,40 @@
+{
+  "name": "tp-websocket",
+  "version": "1.0.0",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js",
+    "test": "NODE_ENV=test mocha --jobs 1 --require test/setup.js test/**/*.test.js",
+    "test:watch": "NODE_ENV=test mocha --jobs 1 --require test/setup.js test/**/*.test.js --watch",
+    "coverage": "NODE_ENV=test c8 --reporter=text --reporter=lcov --check-coverage --lines 70 --statements 70 mocha --jobs 1 --require test/setup.js test/**/*.test.js",
+    "lint": "eslint .",
+    "seed": "node scripts/seed.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@sentry/node": "^10.26.0",
+    "bcrypt": "^6.0.0",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.19.2",
+    "multer": "^2.0.2",
+    "socket.io": "^4.8.1",
+    "winston": "^3.18.3"
+  },
+  "devDependencies": {
+    "c8": "^10.1.2",
+    "chai": "^4.3.10",
+    "eslint": "^9.11.1",
+    "mocha": "^11.7.4",
+    "nodemon": "^3.1.10",
+    "socket.io-client": "^4.8.1",
+    "supertest": "^7.1.4"
+  },
+  "nyc": {}
+}

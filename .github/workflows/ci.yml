@@ -1,0 +1,172 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  lint:
+    name: Lint backend and frontend
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js (20)
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install backend deps
+        working-directory: api
+        run: npm ci
+
+      - name: Install frontend deps
+        working-directory: front
+        run: npm ci
+
+      - name: Lint backend
+        working-directory: api
+        run: npm run lint
+
+      - name: Lint frontend
+        working-directory: front
+        run: npm run lint
+
+  test-backend:
+    name: Test backend (Mongo service)
+    runs-on: ubuntu-latest
+    needs: lint
+    services:
+      mongo:
+        image: mongo:6
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --eval 'db.runCommand(\"ping\")' || exit 1" \
+          --health-interval 10s \
+          --health-timeout 5s \
+          --health-retries 5
+    env:
+      NODE_ENV: test
+      MONGODB_URI: mongodb://127.0.0.1:27017/ci_test
+      JWT_SECRET: testsecret
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: npm
+          cache-dependency-path: api/package-lock.json
+
+      - name: Install deps
+        working-directory: api
+        run: npm ci
+
+      - name: Run tests with coverage
+        working-directory: api
+        run: npm run coverage
+
+      - name: Upload coverage artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-coverage
+          path: api/coverage/**
+          retention-days: 30
+
+  test-frontend:
+    name: Test frontend (unit)
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js (20)
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: front/package-lock.json
+
+      - name: Install deps
+        working-directory: front
+        run: npm ci
+
+      - name: Run unit tests
+        working-directory: front
+        run: npm run test:unit -- --run
+
+  build-frontend:
+    name: Build frontend
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js (20)
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: front/package-lock.json
+
+      - name: Install deps
+        working-directory: front
+        run: npm ci
+
+      - name: Build
+        working-directory: front
+        run: npm run build
+
+  audit:
+    name: Security audit (non-blocking)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: npm
+
+      - name: Install backend deps
+        working-directory: api
+        run: npm ci
+
+      - name: Install frontend deps
+        working-directory: front
+        run: npm ci
+
+      - name: npm audit backend
+        working-directory: api
+        run: npm audit --audit-level=high || true
+
+      - name: npm audit frontend
+        working-directory: front
+        run: npm audit --audit-level=high || true
+
+  notify-on-failure:
+    name: Notify on failure
+    runs-on: ubuntu-latest
+    needs: [lint, test-backend, test-frontend, build-frontend, audit]
+    if: failure()
+    steps:
+      - name: Log failure context
+        run: |
+          echo "Workflow failed"
+          echo "Branch: ${{ github.ref }}"
+          echo "Commit: ${{ github.sha }}"
+          echo "Failed job: ${{ github.job }}"
+
+

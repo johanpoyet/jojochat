@@ -1,0 +1,17 @@
+{
+  "name": "tp-websocket",
+  "version": "1.0.0",
+  "description": "whatsappp",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:api\" \"npm run dev:front\"",
+    "dev:api": "cd api && npm run dev",
+    "dev:front": "cd front && npm run dev",
+    "install:all": "(cd api && npm install) && (cd front && npm install)",
+    "seed": "cd api && npm run seed",
+    "test": "cd api && npm test",
+    "coverage": "cd api && npm run coverage"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

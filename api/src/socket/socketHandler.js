@@ -39,6 +39,11 @@ const socketHandler = (io) => {
 
     connectedUsers.set(socket.userId, socket.id);
 
+    // Log all incoming events for debugging
+    socket.onAny((eventName, ...args) => {
+      console.log(`[Socket Event] ${eventName}`, args);
+    });
+
     await User.findByIdAndUpdate(socket.userId, {
       status: 'online',
       lastConnection: new Date()
@@ -246,25 +251,42 @@ const socketHandler = (io) => {
 
     socket.on('send-group-message', async (data) => {
       try {
+        console.log('[send-group-message] Start', { userId: socket.userId, data });
         const { group_id, content, type = 'text', mediaUrl = null, replyTo = null } = data;
 
         if (!group_id) {
+          console.log('[send-group-message] Error: No group_id');
           return socket.emit('error', { message: 'Group ID is required' });
         }
 
+        console.log('[send-group-message] Finding group:', group_id);
         const group = await Group.findById(group_id);
+        console.log('[send-group-message] Group found:', group ? 'Yes' : 'No');
+
         if (!group || !group.isActive) {
+          console.log('[send-group-message] Error: Group not found or inactive');
           return socket.emit('error', { message: 'Group not found' });
         }
 
-        if (!group.isMember(socket.userId)) {
+        console.log('[send-group-message] Checking if user is member');
+        const isMember = group.isMember(socket.userId);
+        console.log('[send-group-message] Is member:', isMember);
+
+        if (!isMember) {
+          console.log('[send-group-message] Error: Not a member');
           return socket.emit('error', { message: 'Not a member of this group' });
         }
 
-        if (!group.canPost(socket.userId)) {
+        console.log('[send-group-message] Checking if user can post');
+        const canPost = group.canPost(socket.userId);
+        console.log('[send-group-message] Can post:', canPost);
+
+        if (!canPost) {
+          console.log('[send-group-message] Error: Not authorized to post');
           return socket.emit('error', { message: 'Not authorized to post in this group' });
         }
 
+        console.log('[send-group-message] Creating message');
         const message = await Message.create({
           sender: socket.userId,
           group: group_id,
@@ -274,16 +296,20 @@ const socketHandler = (io) => {
           replyTo,
           status: 'sent'
         });
+        console.log('[send-group-message] Message created:', message._id);
 
         group.lastMessage = message._id;
         await group.save();
 
         const populatedMessage = await Message.findById(message._id)
           .populate('sender', 'username avatar')
+          .populate('group', 'name avatar')
           .populate('replyTo');
 
+        console.log('[send-group-message] Emitting message-sent');
         socket.emit('message-sent', populatedMessage);
 
+        console.log('[send-group-message] Broadcasting to members');
         group.members.forEach(member => {
           if (member.user.toString() !== socket.userId) {
             const memberSocketId = connectedUsers.get(member.user.toString());
@@ -295,7 +321,9 @@ const socketHandler = (io) => {
             }
           }
         });
+        console.log('[send-group-message] Done');
       } catch (error) {
+        console.error('[send-group-message] Error:', error);
         handleSocketError(socket, error, 'send-group-message');
       }
     });

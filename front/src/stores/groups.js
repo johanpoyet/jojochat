@@ -21,7 +21,7 @@ export const useGroupsStore = defineStore('groups', () => {
 
       const data = await response.json()
       if (response.ok) {
-        groups.value = data
+        groups.value = data.groups || data
       } else {
         error.value = data.error
       }
@@ -122,7 +122,7 @@ export const useGroupsStore = defineStore('groups', () => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${authStore.token}`
         },
-        body: JSON.stringify({ userId })
+        body: JSON.stringify({ members: [userId] })
       })
 
       const data = await response.json()

@@ -2,18 +2,21 @@
 import { onMounted, ref } from 'vue'
 import { useAuthStore } from '../stores/auth'
 import { useChatStore } from '../stores/chat'
+import { useGroupsStore } from '../stores/groups'
 import ConversationList from './ConversationList.vue'
 import ChatWindow from './ChatWindow.vue'
 import StatusView from './StatusView.vue'
 
 const authStore = useAuthStore()
 const chatStore = useChatStore()
+const groupsStore = useGroupsStore()
 const showStatus = ref(false)
 
 onMounted(async () => {
   chatStore.setupSocketListeners()
   await chatStore.getUsers()
   await chatStore.getConversations()
+  await groupsStore.fetchGroups()
 })
 
 const handleLogout = () => {

@@ -32,6 +32,10 @@ watch(() => chatStore.selectedUser, () => {
   scrollToBottom()
 })
 
+watch(() => chatStore.selectedGroup, () => {
+  scrollToBottom()
+})
+
 watch(() => chatStore.isTyping, () => {
   scrollToBottom()
 })
@@ -126,7 +130,7 @@ const getMediaUrl = (url) => {
 
 <template>
   <div class="chat-window">
-    <div v-if="!chatStore.selectedUser" class="empty-state">
+    <div v-if="!chatStore.selectedUser && !chatStore.selectedGroup" class="empty-state">
       <i class="fas fa-comments"></i>
       <h2>Chat App</h2>
       <p>Select a conversation to start messaging</p>
@@ -137,16 +141,26 @@ const getMediaUrl = (url) => {
         <div class="header-info">
           <div class="avatar">
             <img
-              v-if="chatStore.selectedUser.avatar"
+              v-if="chatStore.selectedGroup?.avatar"
+              :src="chatStore.selectedGroup.avatar"
+              alt="avatar"
+            />
+            <img
+              v-else-if="chatStore.selectedUser?.avatar"
               :src="chatStore.selectedUser.avatar"
               alt="avatar"
             />
             <i v-else class="fas fa-user"></i>
           </div>
           <div class="user-details">
-            <h3>{{ chatStore.selectedUser.username }}</h3>
+            <h3>{{ chatStore.selectedGroup ? chatStore.selectedGroup.name : chatStore.selectedUser.username }}</h3>
             <p class="status">
-              {{ chatStore.isTyping ? 'typing...' : (chatStore.selectedUser.status === 'online' ? 'online' : '') }}
+              <template v-if="chatStore.selectedGroup">
+                {{ chatStore.selectedGroup.members.length }} members
+              </template>
+              <template v-else>
+                {{ chatStore.isTyping ? 'typing...' : (chatStore.selectedUser.status === 'online' ? 'online' : '') }}
+              </template>
             </p>
           </div>
         </div>

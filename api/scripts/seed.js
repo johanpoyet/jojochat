@@ -72,7 +72,7 @@ const seedDatabase = async () => {
         sender: createdUsers[0]._id,
         recipient: createdUsers[1]._id,
         content: 'That\'s awesome! Want to grab coffee later?',
-        status: 'received'
+        status: 'delivered'
       },
       {
         sender: createdUsers[2]._id,
@@ -102,7 +102,7 @@ const seedDatabase = async () => {
         sender: createdUsers[3]._id,
         recipient: createdUsers[4]._id,
         content: 'I\'m stuck on the authentication part',
-        status: 'received'
+        status: 'delivered'
       },
       {
         sender: createdUsers[1]._id,

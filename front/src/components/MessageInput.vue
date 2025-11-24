@@ -18,6 +18,9 @@ const uploading = ref(false)
 const handleInput = () => {
   if (!authStore.socket || !chatStore.selectedUser) return
 
+  // Ne pas envoyer les événements typing pour les groupes
+  if (chatStore.selectedGroup) return
+
   authStore.socket.emit('typing', {
     recipient_id: chatStore.selectedUser.id
   })
@@ -161,14 +164,14 @@ const getFileIcon = (file: File) => {
         @keyup.enter="sendMessage"
         type="text"
         :placeholder="selectedFile ? 'Add a caption...' : 'Type a message'"
-        :disabled="!chatStore.selectedUser"
+        :disabled="!chatStore.selectedUser && !chatStore.selectedGroup"
       />
 
       <button
         v-if="message.trim() || selectedFile"
         class="btn-icon"
         @click="sendMessage"
-        :disabled="!chatStore.selectedUser || uploading"
+        :disabled="(!chatStore.selectedUser && !chatStore.selectedGroup) || uploading"
         title="Send"
       >
         <Send :size="24" />

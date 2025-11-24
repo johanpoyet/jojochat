@@ -7,6 +7,7 @@ export const useChatStore = defineStore('chat', () => {
 
   const conversations = ref([])
   const selectedUser = ref(null)
+  const selectedGroup = ref(null)
   const messages = ref([])
   const users = ref([])
   const typingUsers = ref([])
@@ -35,15 +36,40 @@ export const useChatStore = defineStore('chat', () => {
     messages.value = data.messages.reverse()
   }
 
-  const sendMessage = (content, type = 'text', mediaUrl = null) => {
-    if (!selectedUser.value || !authStore.socket) return
-
-    authStore.socket.emit('send-message', {
-      recipient_id: selectedUser.value.id,
-      content,
-      type,
-      mediaUrl
+  const getGroupMessages = async (groupId) => {
+    const response = await fetch(`${authStore.API_URL}/api/messages/group/${groupId}`, {
+      headers: { 'Authorization': `Bearer ${authStore.token}` }
     })
+    const data = await response.json()
+    messages.value = data.messages.reverse()
+  }
+
+  const sendMessage = (content, type = 'text', mediaUrl = null) => {
+    if (!authStore.socket) return
+
+    if (selectedGroup.value) {
+      // Envoyer un message de groupe
+      console.log('Sending group message:', {
+        group_id: selectedGroup.value._id,
+        content,
+        type,
+        mediaUrl
+      })
+      authStore.socket.emit('send-group-message', {
+        group_id: selectedGroup.value._id,
+        content,
+        type,
+        mediaUrl
+      })
+    } else if (selectedUser.value) {
+      // Envoyer un message direct
+      authStore.socket.emit('send-message', {
+        recipient_id: selectedUser.value.id,
+        content,
+        type,
+        mediaUrl
+      })
+    }
   }
 
   const addReaction = (messageId, emoji) => {
@@ -68,11 +94,32 @@ export const useChatStore = defineStore('chat', () => {
 
   const selectUser = async (user) => {
     selectedUser.value = user
+    selectedGroup.value = null
     await getMessages(user.id)
+  }
+
+  const selectGroup = async (group) => {
+    selectedGroup.value = group
+    selectedUser.value = null
+    messages.value = []
+
+    // Charger les messages du groupe depuis l'API
+    await getGroupMessages(group._id)
+
+    // Rejoindre le room du groupe
+    if (authStore.socket) {
+      authStore.socket.emit('join-group-room', { group_id: group._id })
+    }
   }
 
   const setupSocketListeners = () => {
     if (!authStore.socket) return
+
+    // Listener pour les erreurs WebSocket
+    authStore.socket.on('error', (error) => {
+      console.error('Socket error:', error)
+      alert(`Error: ${error.message || 'Unknown error'}`)
+    })
 
     authStore.socket.on('new-message', (message) => {
       if (selectedUser.value &&
@@ -83,8 +130,33 @@ export const useChatStore = defineStore('chat', () => {
       getConversations()
     })
 
+    authStore.socket.on('new-group-message', (data) => {
+      // Si on est dans ce groupe, ajouter le message
+      if (selectedGroup.value && data.group_id === selectedGroup.value._id) {
+        messages.value.push(data.message)
+      }
+    })
+
     authStore.socket.on('message-sent', (message) => {
-      messages.value.push(message)
+      console.log('Received message-sent:', message)
+
+      // Pour les messages de groupe
+      if (message.group && selectedGroup.value) {
+        const messageGroupId = typeof message.group === 'string' ? message.group : message.group._id || message.group.toString()
+        const selectedGroupId = selectedGroup.value._id
+        console.log('Group message comparison:', messageGroupId, '===', selectedGroupId, '=', messageGroupId === selectedGroupId)
+
+        if (messageGroupId === selectedGroupId) {
+          console.log('Adding message to group conversation')
+          messages.value.push(message)
+        }
+      }
+      // Pour les messages directs
+      else if (message.recipient && selectedUser.value && message.recipient._id === selectedUser.value.id) {
+        console.log('Adding message to direct conversation')
+        messages.value.push(message)
+      }
+
       getConversations()
     })
 
@@ -163,6 +235,7 @@ export const useChatStore = defineStore('chat', () => {
   return {
     conversations,
     selectedUser,
+    selectedGroup,
     messages,
     users,
     typingUsers,
@@ -176,6 +249,7 @@ export const useChatStore = defineStore('chat', () => {
     editMessage,
     deleteMessage,
     selectUser,
+    selectGroup,
     setupSocketListeners
   }
 })

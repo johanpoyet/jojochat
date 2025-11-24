@@ -1,6 +1,7 @@
 const Message = require('../models/Message');
 const Conversation = require('../models/Conversation');
 const User = require('../models/User');
+const Group = require('../models/Group');
 
 const createMessage = async (req, res) => {
   try {
@@ -215,9 +216,56 @@ const markAsRead = async (req, res) => {
   }
 };
 
+const getGroupMessages = async (req, res) => {
+  try {
+    const { group_id } = req.params;
+    const currentUserId = req.user._id;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 50;
+    const skip = (page - 1) * limit;
+
+    const group = await Group.findById(group_id);
+    if (!group) {
+      return res.status(404).json({ error: 'Group not found' });
+    }
+
+    if (!group.isMember(currentUserId)) {
+      return res.status(403).json({ error: 'Not a member of this group' });
+    }
+
+    const messages = await Message.find({
+      group: group_id,
+      deleted: false
+    })
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .populate('sender', 'username avatar')
+      .populate('replyTo');
+
+    const total = await Message.countDocuments({
+      group: group_id,
+      deleted: false
+    });
+
+    res.json({
+      messages,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit)
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
 module.exports = {
   createMessage,
   getMessagesByUser,
+  getGroupMessages,
   updateMessage,
   deleteMessage,
   markAsRead

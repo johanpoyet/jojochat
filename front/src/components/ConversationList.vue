@@ -6,7 +6,7 @@ import { useGroupsStore } from '../stores/groups'
 import { storeToRefs } from 'pinia'
 import { Search, MessageSquarePlus, MoreVertical, CircleDashed, User, X, Check, Users, Settings, UserCog } from 'lucide-vue-next'
 
-const emit = defineEmits(['logout', 'show-status', 'show-settings'])
+const emit = defineEmits(['logout', 'show-status', 'show-settings', 'show-profile'])
 
 const authStore = useAuthStore()
 const chatStore = useChatStore()
@@ -143,9 +143,9 @@ const isUserTyping = (userId) => {
 <template>
   <div class="conversation-list">
     <div class="sidebar-header">
-      <div class="user-info">
+      <div class="user-info" @click="emit('show-profile')">
         <div class="avatar">
-          <img v-if="authStore.user?.avatar" :src="authStore.user.avatar" alt="avatar" />
+          <img v-if="authStore.user?.avatar" :src="`${authStore.API_URL}${authStore.user.avatar}`" alt="avatar" />
           <User v-else :size="24" color="#cfd8dc" />
         </div>
       </div>

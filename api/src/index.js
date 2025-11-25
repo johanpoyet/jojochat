@@ -52,6 +52,8 @@ app.use('/api/media', mediaRoutes);
 
 socketHandler(io);
 
+app.set('io', io);
+
 const PORT = process.env.PORT || 3000;
 
 if (process.env.NODE_ENV !== 'test') {

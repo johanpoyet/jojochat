@@ -8,6 +8,7 @@ const Contact = require('../models/Contact');
 const { retryOperation, handleSocketError } = require('./errorHandler');
 
 const connectedUsers = new Map();
+const tokenToSocket = new Map();
 const typingUsers = new Map();
 
 const socketHandler = (io) => {
@@ -28,6 +29,7 @@ const socketHandler = (io) => {
 
       socket.userId = user._id.toString();
       socket.user = user;
+      socket.token = token;
       next();
     } catch (error) {
       next(new Error('Authentication error'));
@@ -38,6 +40,9 @@ const socketHandler = (io) => {
     console.log(`User connected: ${socket.userId}`);
 
     connectedUsers.set(socket.userId, socket.id);
+    if (socket.token) {
+      tokenToSocket.set(socket.token, socket.id);
+    }
 
     // Log all incoming events for debugging
     socket.onAny((eventName, ...args) => {
@@ -516,6 +521,9 @@ const socketHandler = (io) => {
       console.log(`User disconnected: ${socket.userId}`);
 
       connectedUsers.delete(socket.userId);
+      if (socket.token) {
+        tokenToSocket.delete(socket.token);
+      }
 
       for (const [key, timeout] of typingUsers.entries()) {
         if (key.startsWith(socket.userId)) {
@@ -536,6 +544,17 @@ const socketHandler = (io) => {
       });
     });
   });
+
+  io.disconnectSessionByToken = (token) => {
+    const socketId = tokenToSocket.get(token);
+    if (socketId) {
+      const socket = io.sockets.sockets.get(socketId);
+      if (socket) {
+        socket.emit('session-revoked');
+        socket.disconnect(true);
+      }
+    }
+  };
 };
 
 module.exports = socketHandler;

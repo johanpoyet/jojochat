@@ -51,7 +51,7 @@ const cancelEditing = () => {
     <div class="status-content">
       <div class="my-status">
         <div class="avatar">
-          <img v-if="authStore.user?.avatar" :src="authStore.user.avatar" alt="My Status" />
+          <img v-if="authStore.user?.avatar" :src="`${authStore.API_URL}${authStore.user.avatar}`" alt="My Status" />
           <img v-else src="https://ui-avatars.com/api/?name=Me&background=0D8ABC&color=fff" alt="My Status" />
           <span class="plus-icon">+</span>
         </div>

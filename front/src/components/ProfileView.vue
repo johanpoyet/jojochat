@@ -64,11 +64,26 @@ const handleAvatarUpload = async (event) => {
   const file = event.target.files[0]
   if (!file) return
 
+  // Validate file type
+  if (!file.type.startsWith('image/')) {
+    error.value = 'Please select an image file'
+    return
+  }
+
+  // Validate file size (5MB max)
+  if (file.size > 5 * 1024 * 1024) {
+    error.value = 'Image must be less than 5MB'
+    return
+  }
+
   const formData = new FormData()
-  formData.append('file', file)
+  formData.append('avatar', file)
+
+  loading.value = true
+  error.value = ''
 
   try {
-    const response = await fetch(`${authStore.API_URL}/api/media/upload`, {
+    const response = await fetch(`${authStore.API_URL}/api/users/avatar`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${authStore.token}`
@@ -79,19 +94,15 @@ const handleAvatarUpload = async (event) => {
     const data = await response.json()
 
     if (response.ok) {
-      await fetch(`${authStore.API_URL}/api/users/profile`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${authStore.token}`
-        },
-        body: JSON.stringify({ avatar: data.url })
-      })
-
-      authStore.user = { ...authStore.user, avatar: data.url }
+      authStore.user = { ...authStore.user, avatar: data.avatar }
+      localStorage.setItem('user', JSON.stringify(authStore.user))
+    } else {
+      error.value = data.error || 'Failed to upload avatar'
     }
   } catch (err) {
-    error.value = 'Failed to upload avatar'
+    error.value = 'Network error'
+  } finally {
+    loading.value = false
   }
 }
 </script>
@@ -110,7 +121,7 @@ const handleAvatarUpload = async (event) => {
         <div class="avatar-wrapper">
           <img
             v-if="authStore.user?.avatar"
-            :src="authStore.user.avatar"
+            :src="`${authStore.API_URL}${authStore.user.avatar}`"
             alt="avatar"
             class="avatar"
           />

@@ -10,6 +10,7 @@ const authStore = useAuthStore()
 const sessions = ref([])
 const loading = ref(true)
 const error = ref('')
+const success = ref('')
 
 onMounted(async () => {
   await fetchSessions()
@@ -18,6 +19,7 @@ onMounted(async () => {
 const fetchSessions = async () => {
   loading.value = true
   error.value = ''
+  success.value = ''
 
   try {
     const response = await fetch(`${authStore.API_URL}/api/auth/sessions`, {
@@ -26,12 +28,12 @@ const fetchSessions = async () => {
 
     const data = await response.json()
     if (response.ok) {
-      sessions.value = data.sessions
+      sessions.value = data.sessions || []
     } else {
-      error.value = data.error
+      error.value = data.error || 'Erreur lors du chargement'
     }
   } catch (err) {
-    error.value = 'Failed to load sessions'
+    error.value = 'Échec du chargement des sessions'
   } finally {
     loading.value = false
   }
@@ -45,33 +47,86 @@ const getDeviceIcon = (device) => {
   }
 }
 
+const getDeviceName = (device) => {
+  const names = {
+    'mobile': 'Mobile',
+    'tablet': 'Tablette',
+    'desktop': 'Ordinateur',
+    'unknown': 'Appareil inconnu'
+  }
+  return names[device] || 'Appareil inconnu'
+}
+
 const formatDate = (date) => {
-  return new Date(date).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  })
+  if (!date) return 'Unknown'
+  try {
+    return new Date(date).toLocaleDateString('fr-FR', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+  } catch (e) {
+    return 'Invalid date'
+  }
 }
 
 const revokeSession = async (sessionId) => {
+  if (!sessionId) {
+    error.value = 'ID de session invalide'
+    return
+  }
+
+  const session = sessions.value.find(s => (s._id || s.id) === sessionId)
+  const isCurrent = session?.isCurrent
+
+  if (!confirm('Êtes-vous sûr de vouloir déconnecter cet appareil ?')) return
+
+  error.value = ''
+  loading.value = true
+
   try {
     const response = await fetch(`${authStore.API_URL}/api/auth/sessions/${sessionId}`, {
       method: 'DELETE',
       headers: { 'Authorization': `Bearer ${authStore.token}` }
     })
 
+    const data = await response.json()
+
     if (response.ok) {
-      sessions.value = sessions.value.filter(s => s._id !== sessionId)
+      // If we revoked the current session, logout
+      if (isCurrent) {
+        success.value = 'Session déconnectée avec succès'
+        setTimeout(() => {
+          authStore.logout()
+        }, 1000)
+        return
+      }
+      // Remove the session from the list
+      sessions.value = sessions.value.filter(s => {
+        const id = s._id || s.id
+        return id !== sessionId
+      })
+      success.value = 'Appareil déconnecté avec succès'
+      setTimeout(() => {
+        success.value = ''
+      }, 3000)
+    } else {
+      error.value = data.error || 'Échec de la révocation de la session'
+      setTimeout(() => {
+        error.value = ''
+      }, 5000)
     }
   } catch (err) {
-    error.value = 'Failed to revoke session'
+    error.value = 'Erreur réseau lors de la révocation de la session'
+  } finally {
+    loading.value = false
   }
 }
 
 const revokeAllSessions = async () => {
-  if (!confirm('This will log out all other devices. Continue?')) return
+  if (!confirm('Cela déconnectera tous les autres appareils. Continuer ?')) return
 
   try {
     const response = await fetch(`${authStore.API_URL}/api/auth/sessions`, {
@@ -83,7 +138,7 @@ const revokeAllSessions = async () => {
       await fetchSessions()
     }
   } catch (err) {
-    error.value = 'Failed to revoke sessions'
+    error.value = 'Échec de la révocation des sessions'
   }
 }
 </script>
@@ -94,48 +149,58 @@ const revokeAllSessions = async () => {
       <button @click="emit('close')" class="btn-back">
         <ArrowLeft :size="24" />
       </button>
-      <h2>Active Sessions</h2>
+      <h2>Sessions actives</h2>
     </div>
 
     <div class="sessions-content">
       <div class="security-notice">
         <Shield :size="24" />
-        <p>These are the devices currently logged into your account. You can log out any session you don't recognize.</p>
+        <p>Voici les appareils actuellement connectés à votre compte. Vous pouvez déconnecter toute session que vous ne reconnaissez pas.</p>
       </div>
 
-      <div v-if="loading" class="loading">Loading sessions...</div>
+      <div v-if="loading" class="loading">Chargement des sessions...</div>
 
-      <div v-else-if="error" class="error-message">{{ error }}</div>
+      <div v-if="success" class="success-message">{{ success }}</div>
+      <div v-if="error" class="error-message">{{ error }}</div>
 
       <div v-else>
-        <div v-if="sessions.length > 1" class="revoke-all">
+        <div v-if="sessions.filter(s => !s.isCurrent).length > 0" class="revoke-all">
           <button @click="revokeAllSessions" class="btn-revoke-all">
-            Log out all other devices
+            Déconnecter tous les autres appareils
           </button>
         </div>
 
         <div class="sessions-list">
-          <div v-for="session in sessions" :key="session._id" class="session-item">
+          <div v-for="session in sessions" :key="session._id || session.id" class="session-item" :class="{ 'current-session': session.isCurrent }">
             <div class="session-icon">
               <component :is="getDeviceIcon(session.device)" :size="24" />
             </div>
             <div class="session-info">
-              <span class="session-device">{{ session.device || 'Unknown device' }}</span>
+              <div class="session-header">
+                <span class="session-device">{{ getDeviceName(session.device) }}</span>
+                <span v-if="session.isCurrent" class="current-badge">Appareil actuel</span>
+              </div>
               <span class="session-details">
-                {{ session.ip || 'Unknown IP' }}
+                {{ session.ip || 'IP inconnue' }}
               </span>
               <span class="session-date">
-                Last activity: {{ formatDate(session.lastActivity) }}
+                Dernière activité : {{ formatDate(session.lastActivity) }}
               </span>
             </div>
-            <button @click="revokeSession(session._id)" class="btn-revoke">
+            <button 
+              v-if="!session.isCurrent" 
+              @click="revokeSession(session._id || session.id)" 
+              class="btn-revoke"
+              title="Déconnecter cet appareil"
+              :disabled="loading"
+            >
               <Trash2 :size="18" />
             </button>
           </div>
         </div>
 
         <div v-if="sessions.length === 0" class="no-sessions">
-          No active sessions found
+          Aucune session active trouvée
         </div>
       </div>
     </div>
@@ -214,6 +279,14 @@ const revokeAllSessions = async () => {
   border-radius: 8px;
 }
 
+.success-message {
+  background: #d1fae5;
+  color: #059669;
+  padding: 12px 20px;
+  margin: 10px;
+  border-radius: 8px;
+}
+
 .revoke-all {
   padding: 10px 20px;
 }
@@ -244,6 +317,25 @@ const revokeAllSessions = async () => {
   gap: 16px;
   padding: 16px 20px;
   border-bottom: 1px solid var(--border-color);
+}
+
+.session-item.current-session {
+  background: #e7f8f5;
+}
+
+.session-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.current-badge {
+  background: var(--accent-color);
+  color: white;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 500;
 }
 
 .session-icon {
@@ -290,9 +382,14 @@ const revokeAllSessions = async () => {
   padding: 8px;
 }
 
-.btn-revoke:hover {
+.btn-revoke:hover:not(:disabled) {
   background: #fee2e2;
   border-radius: 50%;
+}
+
+.btn-revoke:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .no-sessions {

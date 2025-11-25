@@ -120,6 +120,10 @@ export const useAuthStore = defineStore('auth', () => {
     socket.value.on('error', (error) => {
       console.error('Socket error:', error)
     })
+
+    socket.value.on('session-revoked', () => {
+      logout()
+    })
   }
 
   if (token.value && !socket.value) {

@@ -36,6 +36,8 @@ const register = async (req, res) => {
 
     const token = generateToken(user._id);
 
+    await Session.createSession(user._id, token, req, 7);
+
     res.status(201).json({
       token,
       user: {
@@ -75,6 +77,8 @@ const login = async (req, res) => {
 
     const token = generateToken(user._id);
 
+    await Session.createSession(user._id, token, req, 7);
+
     res.json({
       token,
       user: {
@@ -102,6 +106,11 @@ const logout = async (req, res) => {
     user.lastConnection = new Date();
     await user.save();
 
+    const token = req.headers.authorization?.split(' ')[1];
+    if (token) {
+      await Session.deactivateSession(token);
+    }
+
     res.json({ message: 'Logged out successfully' });
   } catch (error) {
     res.status(500).json({ error: 'Server error' });
@@ -111,13 +120,36 @@ const logout = async (req, res) => {
 const getSessions = async (req, res) => {
   try {
     const userId = req.user._id;
+    const currentToken = req.headers.authorization?.split(' ')[1];
+
+    let currentSessionId = null;
+    if (currentToken) {
+      const currentSession = await Session.findOne({ token: currentToken, user: userId, isActive: true });
+      if (currentSession) {
+        currentSessionId = currentSession._id.toString();
+      }
+    }
 
     const sessions = await Session.find({ user: userId, isActive: true })
       .sort({ lastActivity: -1 })
       .select('-token');
 
-    res.json({ sessions });
+    console.log(`Found ${sessions.length} active sessions for user ${userId}`);
+
+    res.json({
+      sessions: sessions.map(session => ({
+        _id: session._id,
+        id: session._id,
+        ip: session.ip,
+        device: session.device,
+        userAgent: session.userAgent,
+        lastActivity: session.lastActivity,
+        createdAt: session.createdAt,
+        isCurrent: currentSessionId === session._id.toString()
+      }))
+    });
   } catch (error) {
+    console.error('Error fetching sessions:', error);
     res.status(500).json({ error: 'Server error' });
   }
 };
@@ -127,16 +159,29 @@ const revokeSession = async (req, res) => {
     const { sessionId } = req.params;
     const userId = req.user._id;
 
-    const session = await Session.findOne({ _id: sessionId, user: userId });
-    if (!session) {
-      return res.status(404).json({ error: 'Session not found' });
+    if (!sessionId) {
+      return res.status(400).json({ error: 'Session ID is required' });
     }
 
+    const session = await Session.findOne({ _id: sessionId, user: userId, isActive: true }).select('+token');
+    if (!session) {
+      return res.status(404).json({ error: 'Session not found or already inactive' });
+    }
+
+    const sessionToken = session.token;
     session.isActive = false;
     await session.save();
 
+    const io = req.app.get('io');
+    if (io && io.disconnectSessionByToken && sessionToken) {
+      io.disconnectSessionByToken(sessionToken);
+    }
+
     res.json({ message: 'Session revoked successfully' });
   } catch (error) {
+    if (error.name === 'CastError') {
+      return res.status(400).json({ error: 'Invalid session ID format' });
+    }
     res.status(500).json({ error: 'Server error' });
   }
 };

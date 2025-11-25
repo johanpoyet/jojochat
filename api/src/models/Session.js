@@ -46,10 +46,20 @@ sessionSchema.statics.createSession = async function(userId, token, req, expires
   const ip = req.ip || req.headers['x-forwarded-for'] || req.connection?.remoteAddress;
   const userAgent = req.headers['user-agent'] || 'unknown';
 
-  let device = 'unknown';
-  if (userAgent.includes('Mobile')) device = 'mobile';
-  else if (userAgent.includes('Tablet')) device = 'tablet';
-  else if (userAgent.includes('Windows') || userAgent.includes('Mac') || userAgent.includes('Linux')) device = 'desktop';
+  let device = 'desktop';
+  const ua = userAgent.toLowerCase();
+  
+  // Mobile detection
+  if (/android|webos|iphone|ipod|blackberry|iemobile|opera mini/i.test(ua)) {
+    // Check if it's a tablet (Android tablets usually have 'Mobile' in UA but are tablets)
+    if (/ipad|android(?!.*mobile)|tablet/i.test(ua)) {
+      device = 'tablet';
+    } else {
+      device = 'mobile';
+    }
+  } else if (/ipad|tablet/i.test(ua)) {
+    device = 'tablet';
+  }
 
   const expiresAt = new Date();
   expiresAt.setDate(expiresAt.getDate() + expiresInDays);

@@ -1,4 +1,10 @@
 const User = require('../models/User');
+const Session = require('../models/Session');
+const Conversation = require('../models/Conversation');
+const Message = require('../models/Message');
+const Contact = require('../models/Contact');
+const path = require('path');
+const fs = require('fs');
 
 const getUserById = async (req, res) => {
   try {
@@ -119,4 +125,198 @@ const searchUsers = async (req, res) => {
   }
 };
 
-module.exports = { getUserById, getUsers, updateProfile, searchUsers };
+// Get user's active sessions
+const getUserSessions = async (req, res) => {
+  try {
+    const userId = req.user._id;
+
+    const sessions = await Session.find({ user: userId, isActive: true })
+      .sort({ lastActivity: -1 })
+      .select('-token');
+
+    res.json({
+      sessions: sessions.map(session => ({
+        id: session._id,
+        ip: session.ip,
+        device: session.device,
+        userAgent: session.userAgent,
+        lastActivity: session.lastActivity,
+        createdAt: session.createdAt
+      }))
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
+// Get user's connection history
+const getConnectionHistory = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const skip = (page - 1) * limit;
+
+    const sessions = await Session.find({ user: userId })
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .select('-token');
+
+    const total = await Session.countDocuments({ user: userId });
+
+    res.json({
+      sessions: sessions.map(session => ({
+        id: session._id,
+        ip: session.ip,
+        device: session.device,
+        userAgent: session.userAgent,
+        isActive: session.isActive,
+        lastActivity: session.lastActivity,
+        createdAt: session.createdAt
+      })),
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit)
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
+// Deactivate a specific session
+const deactivateSession = async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    const userId = req.user._id;
+
+    const session = await Session.findOne({ _id: sessionId, user: userId });
+
+    if (!session) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+
+    session.isActive = false;
+    await session.save();
+
+    res.json({ message: 'Session deactivated successfully' });
+  } catch (error) {
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
+// Upload avatar
+const uploadAvatar = async (req, res) => {
+  try {
+    const userId = req.user._id;
+
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+
+    // Delete old avatar if exists
+    const user = await User.findById(userId);
+    if (user.avatar) {
+      const oldAvatarPath = path.join(__dirname, '../../uploads', user.avatar);
+      if (fs.existsSync(oldAvatarPath)) {
+        fs.unlinkSync(oldAvatarPath);
+      }
+    }
+
+    // Update user with new avatar path
+    const avatarPath = `/uploads/avatars/${req.file.filename}`;
+    user.avatar = avatarPath;
+    await user.save();
+
+    res.json({
+      message: 'Avatar uploaded successfully',
+      avatar: avatarPath
+    });
+  } catch (error) {
+    console.error('Upload avatar error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
+// Delete avatar
+const deleteAvatar = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    if (user.avatar) {
+      const avatarPath = path.join(__dirname, '../../uploads', user.avatar);
+      if (fs.existsSync(avatarPath)) {
+        fs.unlinkSync(avatarPath);
+      }
+      user.avatar = null;
+      await user.save();
+    }
+
+    res.json({ message: 'Avatar deleted successfully' });
+  } catch (error) {
+    console.error('Delete avatar error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
+// Delete user account
+const deleteAccount = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const { password } = req.body;
+
+    // Verify password
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const isPasswordValid = await user.comparePassword(password);
+    if (!isPasswordValid) {
+      return res.status(401).json({ error: 'Invalid password' });
+    }
+
+    // Delete avatar if exists
+    if (user.avatar) {
+      const avatarPath = path.join(__dirname, '../../uploads', user.avatar);
+      if (fs.existsSync(avatarPath)) {
+        fs.unlinkSync(avatarPath);
+      }
+    }
+
+    // Delete all user data
+    await Session.deleteMany({ user: userId });
+    await Contact.deleteMany({ $or: [{ user: userId }, { contact: userId }] });
+    await Message.deleteMany({ $or: [{ sender: userId }, { recipient: userId }] });
+    await Conversation.deleteMany({ participants: userId });
+
+    // Delete user
+    await User.findByIdAndDelete(userId);
+
+    res.json({ message: 'Account deleted successfully' });
+  } catch (error) {
+    console.error('Delete account error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
+module.exports = {
+  getUserById,
+  getUsers,
+  updateProfile,
+  searchUsers,
+  getUserSessions,
+  getConnectionHistory,
+  deactivateSession,
+  uploadAvatar,
+  deleteAvatar,
+  deleteAccount
+};

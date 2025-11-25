@@ -193,13 +193,13 @@ const handleAvatarUpload = async (event) => {
 .profile-view {
   width: 100%;
   height: 100%;
-  background: #f0f2f5;
+  background: var(--bg-primary);
   display: flex;
   flex-direction: column;
 }
 
 .profile-header {
-  background: #008069;
+  background: var(--accent-dark);
   color: white;
   padding: 60px 20px 20px;
   display: flex;
@@ -228,7 +228,7 @@ const handleAvatarUpload = async (event) => {
 }
 
 .avatar-section {
-  background: white;
+  background: var(--bg-secondary);
   padding: 28px;
   display: flex;
   justify-content: center;
@@ -278,20 +278,20 @@ const handleAvatarUpload = async (event) => {
 
 .error-message {
   background: #fee2e2;
-  color: #dc2626;
+  color: var(--danger-color);
   padding: 12px 20px;
   margin: 10px 0;
 }
 
 .profile-field {
-  background: white;
+  background: var(--bg-secondary);
   padding: 14px 20px;
   margin-bottom: 1px;
 }
 
 .profile-field label {
   display: block;
-  color: #008069;
+  color: var(--accent-dark);
   font-size: 14px;
   margin-bottom: 4px;
 }
@@ -304,7 +304,7 @@ const handleAvatarUpload = async (event) => {
 }
 
 .field-content span {
-  color: #111b21;
+  color: var(--text-primary);
   font-size: 17px;
   flex: 1;
 }
@@ -312,10 +312,12 @@ const handleAvatarUpload = async (event) => {
 .field-content input {
   flex: 1;
   border: none;
-  border-bottom: 2px solid #00a884;
+  border-bottom: 2px solid var(--accent-color);
   padding: 4px 0;
   font-size: 17px;
   outline: none;
+  background: transparent;
+  color: var(--text-primary);
 }
 
 .field-actions {
@@ -326,17 +328,17 @@ const handleAvatarUpload = async (event) => {
 .field-actions button {
   background: none;
   border: none;
-  color: #667781;
+  color: var(--text-secondary);
   cursor: pointer;
   padding: 4px;
 }
 
 .field-actions button:hover {
-  color: #00a884;
+  color: var(--accent-color);
 }
 
 .btn-edit {
-  color: #00a884 !important;
+  color: var(--accent-color) !important;
   font-size: 14px;
 }
 </style>

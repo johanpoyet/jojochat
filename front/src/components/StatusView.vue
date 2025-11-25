@@ -118,13 +118,13 @@ const cancelEditing = () => {
   min-width: 340px;
   max-width: 450px;
   height: 100%;
-  background: white;
+  background: var(--bg-secondary);
   z-index: 100;
   transform: translateX(-110%);
   transition: transform 0.3s cubic-bezier(0.1, 0.82, 0.25, 1);
   display: flex;
   flex-direction: column;
-  border-right: 1px solid #d1d7db;
+  border-right: 1px solid var(--border-color);
 }
 
 .status-view.show {
@@ -133,7 +133,7 @@ const cancelEditing = () => {
 
 .status-header {
   height: 108px;
-  background: #008069;
+  background: var(--accent-dark);
   padding: 0 20px;
   display: flex;
   align-items: flex-end;
@@ -160,14 +160,14 @@ const cancelEditing = () => {
 .status-content {
   flex: 1;
   overflow-y: auto;
-  background: #f0f2f5;
+  background: var(--bg-primary);
 }
 
 .my-status {
   display: flex;
   align-items: center;
   padding: 12px 16px;
-  background: white;
+  background: var(--bg-secondary);
   cursor: pointer;
   margin-bottom: 10px;
   box-shadow: 0 1px 3px rgba(0,0,0,0.08);
@@ -177,7 +177,7 @@ const cancelEditing = () => {
   padding: 15px 16px;
   margin: 0;
   font-size: 14px;
-  color: #008069;
+  color: var(--accent-dark);
   font-weight: 500;
 }
 
@@ -185,13 +185,13 @@ const cancelEditing = () => {
   display: flex;
   align-items: center;
   padding: 12px 16px;
-  background: white;
+  background: var(--bg-secondary);
   cursor: pointer;
-  border-bottom: 1px solid #f0f2f5;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .status-item:hover, .my-status:hover {
-  background: #f5f6f6;
+  background: var(--hover-color);
 }
 
 .avatar {
@@ -211,14 +211,14 @@ const cancelEditing = () => {
 
 .avatar.ring {
   padding: 2px;
-  border: 2px solid #008069;
+  border: 2px solid var(--accent-color);
 }
 
 .plus-icon {
   position: absolute;
   bottom: 0;
   right: 0;
-  background: #008069;
+  background: var(--accent-color);
   color: white;
   width: 14px;
   height: 14px;
@@ -227,7 +227,7 @@ const cancelEditing = () => {
   align-items: center;
   justify-content: center;
   font-size: 12px;
-  border: 2px solid white;
+  border: 2px solid var(--bg-secondary);
 }
 
 .status-info {
@@ -237,14 +237,14 @@ const cancelEditing = () => {
 .status-info h3 {
   margin: 0;
   font-size: 16px;
-  color: #111b21;
+  color: var(--text-primary);
   font-weight: 400;
 }
 
 .status-info p {
   margin: 0;
   font-size: 13px;
-  color: #667781;
+  color: var(--text-secondary);
   margin-top: 2px;
 }
 
@@ -257,7 +257,7 @@ const cancelEditing = () => {
 .btn-edit {
   background: none;
   border: none;
-  color: #54656f;
+  color: var(--text-secondary);
   cursor: pointer;
   padding: 4px;
 }
@@ -272,10 +272,12 @@ const cancelEditing = () => {
 .edit-status input {
   flex: 1;
   border: none;
-  border-bottom: 2px solid #008069;
+  border-bottom: 2px solid var(--accent-color);
   outline: none;
   font-size: 13px;
   padding: 4px 0;
+  background: transparent;
+  color: var(--text-primary);
 }
 
 .btn-action {
@@ -289,10 +291,10 @@ const cancelEditing = () => {
 }
 
 .btn-action.save {
-  color: #008069;
+  color: var(--accent-color);
 }
 
 .btn-action.cancel {
-  color: #54656f;
+  color: var(--text-secondary);
 }
 </style>

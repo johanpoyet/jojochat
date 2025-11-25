@@ -6,6 +6,7 @@ export const useSettingsStore = defineStore('settings', () => {
   const notifications = ref(true)
   const soundEnabled = ref(true)
   const enterToSend = ref(true)
+  const language = ref('en')
 
   const init = () => {
     const saved = localStorage.getItem('app-settings')
@@ -15,6 +16,7 @@ export const useSettingsStore = defineStore('settings', () => {
       notifications.value = settings.notifications ?? true
       soundEnabled.value = settings.soundEnabled ?? true
       enterToSend.value = settings.enterToSend ?? true
+      language.value = settings.language ?? 'en'
     }
     applyDarkMode()
   }
@@ -24,7 +26,8 @@ export const useSettingsStore = defineStore('settings', () => {
       darkMode: darkMode.value,
       notifications: notifications.value,
       soundEnabled: soundEnabled.value,
-      enterToSend: enterToSend.value
+      enterToSend: enterToSend.value,
+      language: language.value
     }))
   }
 
@@ -57,17 +60,24 @@ export const useSettingsStore = defineStore('settings', () => {
     save()
   }
 
-  watch([darkMode, notifications, soundEnabled, enterToSend], save, { deep: true })
+  const setLanguage = (value) => {
+    language.value = value
+    save()
+  }
+
+  watch([darkMode, notifications, soundEnabled, enterToSend, language], save, { deep: true })
 
   return {
     darkMode,
     notifications,
     soundEnabled,
     enterToSend,
+    language,
     init,
     toggleDarkMode,
     setNotifications,
     setSoundEnabled,
-    setEnterToSend
+    setEnterToSend,
+    setLanguage
   }
 })

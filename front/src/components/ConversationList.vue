@@ -4,9 +4,9 @@ import { useAuthStore } from '../stores/auth'
 import { useChatStore } from '../stores/chat'
 import { useGroupsStore } from '../stores/groups'
 import { storeToRefs } from 'pinia'
-import { Search, MessageSquarePlus, MoreVertical, CircleDashed, User, X, Check, Users } from 'lucide-vue-next'
+import { Search, MessageSquarePlus, MoreVertical, CircleDashed, User, X, Check, Users, Settings, UserCog } from 'lucide-vue-next'
 
-const emit = defineEmits(['logout', 'show-status'])
+const emit = defineEmits(['logout', 'show-status', 'show-settings'])
 
 const authStore = useAuthStore()
 const chatStore = useChatStore()
@@ -28,6 +28,11 @@ const toggleMenu = () => {
 const handleLogout = () => {
   showMenu.value = false
   emit('logout')
+}
+
+const handleSettings = () => {
+  showMenu.value = false
+  emit('show-settings')
 }
 
 const selectUser = async (user) => {
@@ -156,7 +161,12 @@ const isUserTyping = (userId) => {
             <MoreVertical :size="24" />
           </button>
           <div v-if="showMenu" class="dropdown-menu">
+            <button @click="handleSettings" class="menu-item">
+              <Settings :size="18" />
+              Settings
+            </button>
             <button @click="handleLogout" class="menu-item">
+              <UserCog :size="18" />
               Logout
             </button>
           </div>
@@ -344,8 +354,8 @@ const isUserTyping = (userId) => {
   width: 30%;
   min-width: 340px;
   max-width: 450px;
-  background: white;
-  border-right: 1px solid #d1d7db;
+  background: var(--bg-secondary);
+  border-right: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
@@ -357,7 +367,7 @@ const isUserTyping = (userId) => {
   justify-content: space-between;
   align-items: center;
   padding: 10px 16px;
-  background: #f0f2f5;
+  background: var(--bg-primary);
   height: 59px;
   box-sizing: border-box;
 }
@@ -395,7 +405,7 @@ const isUserTyping = (userId) => {
 .icon-btn {
   background: none;
   border: none;
-  color: #54656f;
+  color: var(--text-secondary);
   cursor: pointer;
   padding: 8px;
   border-radius: 50%;
@@ -405,7 +415,7 @@ const isUserTyping = (userId) => {
 }
 
 .icon-btn:hover {
-  background-color: rgba(0,0,0,0.05);
+  background-color: var(--hover-color);
 }
 
 .menu-container {
@@ -416,7 +426,7 @@ const isUserTyping = (userId) => {
   position: absolute;
   top: 100%;
   right: 0;
-  background: white;
+  background: var(--bg-secondary);
   border-radius: 4px;
   box-shadow: 0 2px 5px rgba(0,0,0,0.2);
   padding: 5px 0;
@@ -425,7 +435,9 @@ const isUserTyping = (userId) => {
 }
 
 .menu-item {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 12px;
   width: 100%;
   padding: 10px 20px;
   text-align: left;
@@ -433,21 +445,21 @@ const isUserTyping = (userId) => {
   border: none;
   cursor: pointer;
   font-size: 14.5px;
-  color: #3b4a54;
+  color: var(--text-primary);
 }
 
 .menu-item:hover {
-  background: #f5f6f6;
+  background: var(--hover-color);
 }
 
 .search-container {
   padding: 7px 10px;
-  background: white;
-  border-bottom: 1px solid #f0f2f5;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
 }
 
 .search-box {
-  background: #f0f2f5;
+  background: var(--bg-primary);
   border-radius: 8px;
   display: flex;
   align-items: center;
@@ -458,7 +470,7 @@ const isUserTyping = (userId) => {
 .search-icon {
   background: none;
   border: none;
-  color: #54656f;
+  color: var(--text-secondary);
   padding: 0 10px 0 0;
   display: flex;
   align-items: center;
@@ -470,18 +482,18 @@ const isUserTyping = (userId) => {
   background: transparent;
   outline: none;
   font-size: 14px;
-  color: #3b4a54;
+  color: var(--text-primary);
   width: 100%;
 }
 
 .search-box input::placeholder {
-  color: #54656f;
+  color: var(--text-secondary);
 }
 
 .conversations {
   flex: 1;
   overflow-y: auto;
-  background: white;
+  background: var(--bg-secondary);
 }
 
 .conversation-item {
@@ -491,16 +503,16 @@ const isUserTyping = (userId) => {
   padding: 0 15px;
   height: 72px;
   cursor: pointer;
-  background: white;
+  background: var(--bg-secondary);
   position: relative;
 }
 
 .conversation-item:hover {
-  background: #f5f6f6;
+  background: var(--hover-color);
 }
 
 .conversation-item.active {
-  background: #f0f2f5;
+  background: var(--bg-primary);
 }
 
 .conversation-item .avatar {
@@ -515,7 +527,7 @@ const isUserTyping = (userId) => {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  border-bottom: 1px solid #f0f2f5;
+  border-bottom: 1px solid var(--border-color);
   padding-right: 15px;
   min-width: 0;
 }
@@ -534,14 +546,14 @@ const isUserTyping = (userId) => {
 .conv-header h4 {
   margin: 0;
   font-size: 17px;
-  color: #111b21;
+  color: var(--text-primary);
   font-weight: 400;
   line-height: 21px;
 }
 
 .time {
   font-size: 12px;
-  color: #667781;
+  color: var(--text-secondary);
   line-height: 14px;
 }
 
@@ -555,7 +567,7 @@ const isUserTyping = (userId) => {
 .conv-preview p {
   margin: 0;
   font-size: 14px;
-  color: #667781;
+  color: var(--text-secondary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -563,7 +575,7 @@ const isUserTyping = (userId) => {
 }
 
 .typing-text {
-  color: #00a884 !important;
+  color: var(--accent-color) !important;
   font-weight: 500;
 }
 
@@ -596,7 +608,7 @@ const isUserTyping = (userId) => {
 }
 
 .modal-content {
-  background: white;
+  background: var(--bg-secondary);
   border-radius: 12px;
   width: 90%;
   max-width: 500px;
@@ -611,20 +623,20 @@ const isUserTyping = (userId) => {
   justify-content: space-between;
   align-items: center;
   padding: 1.25rem 1.5rem;
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .modal-header h3 {
   margin: 0;
   font-size: 1.25rem;
-  color: #111;
+  color: var(--text-primary);
   font-weight: 500;
 }
 
 .btn-close {
   background: none;
   border: none;
-  color: #54656f;
+  color: var(--text-secondary);
   cursor: pointer;
   font-size: 1.5rem;
   padding: 0.25rem;
@@ -633,7 +645,7 @@ const isUserTyping = (userId) => {
 }
 
 .btn-close:hover {
-  color: #128C7E;
+  color: var(--accent-color);
 }
 
 .modal-body {
@@ -643,7 +655,7 @@ const isUserTyping = (userId) => {
 }
 
 .modal-body .search-box {
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .user-list {
@@ -652,7 +664,7 @@ const isUserTyping = (userId) => {
 }
 
 .user-list .conversation-item {
-  border-bottom: 1px solid #f0f2f5;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .user-list .conversation-item:last-child {
@@ -664,8 +676,8 @@ const isUserTyping = (userId) => {
   display: flex;
   gap: 0;
   padding: 10px 15px;
-  border-bottom: 1px solid #e0e0e0;
-  background: #f8f9fa;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-primary);
 }
 
 .mode-btn {
@@ -675,9 +687,9 @@ const isUserTyping = (userId) => {
   justify-content: center;
   gap: 8px;
   padding: 10px 16px;
-  border: 1px solid #d1d7db;
-  background: white;
-  color: #54656f;
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
   cursor: pointer;
   font-size: 14px;
   font-weight: 500;
@@ -694,30 +706,31 @@ const isUserTyping = (userId) => {
 }
 
 .mode-btn:hover {
-  background: #f5f6f6;
+  background: var(--hover-color);
 }
 
 .mode-btn.active {
-  background: #00a884;
+  background: var(--accent-color);
   color: white;
-  border-color: #00a884;
+  border-color: var(--accent-color);
 }
 
 /* Group Info Section */
 .group-info-section {
   padding: 15px;
-  border-bottom: 1px solid #e0e0e0;
-  background: white;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-secondary);
 }
 
 .group-name-input,
 .group-description-input {
   width: 100%;
   padding: 12px;
-  border: 1px solid #d1d7db;
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   font-size: 14px;
-  color: #3b4a54;
+  color: var(--text-primary);
+  background: var(--bg-tertiary);
   outline: none;
   transition: border-color 0.2s;
   box-sizing: border-box;
@@ -729,18 +742,18 @@ const isUserTyping = (userId) => {
 
 .group-name-input:focus,
 .group-description-input:focus {
-  border-color: #00a884;
+  border-color: var(--accent-color);
 }
 
 .group-name-input::placeholder,
 .group-description-input::placeholder {
-  color: #8696a0;
+  color: var(--text-secondary);
 }
 
 .selected-users-count {
   margin-top: 10px;
   font-size: 13px;
-  color: #00a884;
+  color: var(--accent-color);
   font-weight: 500;
 }
 
@@ -752,29 +765,29 @@ const isUserTyping = (userId) => {
 .checkbox {
   width: 24px;
   height: 24px;
-  border: 2px solid #d1d7db;
+  border: 2px solid var(--border-color);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.2s;
-  background: white;
+  background: var(--bg-secondary);
 }
 
 .checkbox.checked {
-  background: #00a884;
-  border-color: #00a884;
+  background: var(--accent-color);
+  border-color: var(--accent-color);
 }
 
 .conversation-item.selected {
-  background: #f0f9f6 !important;
+  background: var(--hover-color) !important;
 }
 
 /* Modal Footer */
 .modal-footer {
   padding: 15px;
-  border-top: 1px solid #e0e0e0;
-  background: white;
+  border-top: 1px solid var(--border-color);
+  background: var(--bg-secondary);
   display: flex;
   justify-content: flex-end;
 }
@@ -784,7 +797,7 @@ const isUserTyping = (userId) => {
   align-items: center;
   gap: 8px;
   padding: 12px 24px;
-  background: #00a884;
+  background: var(--accent-color);
   color: white;
   border: none;
   border-radius: 8px;
@@ -797,12 +810,12 @@ const isUserTyping = (userId) => {
 }
 
 .create-group-btn:hover:not(.disabled) {
-  background: #008c6f;
+  background: var(--accent-dark);
 }
 
 .create-group-btn.disabled {
-  background: #d1d7db;
-  color: #8696a0;
+  background: var(--border-color);
+  color: var(--text-secondary);
   cursor: not-allowed;
 }
 

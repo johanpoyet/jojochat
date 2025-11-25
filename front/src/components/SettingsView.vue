@@ -4,10 +4,10 @@ import { useSettingsStore } from '../stores/settings'
 import { useAuthStore } from '../stores/auth'
 import {
   ArrowLeft, Moon, Sun, Bell, BellOff, Volume2, VolumeX,
-  Keyboard, Lock, LogOut, Trash2, Shield, ChevronRight
+  Keyboard, Lock, LogOut, Trash2, Shield, ChevronRight, Globe, UserX
 } from 'lucide-vue-next'
 
-const emit = defineEmits(['close', 'show-sessions'])
+const emit = defineEmits(['close', 'show-sessions', 'show-blocked-contacts'])
 
 const settingsStore = useSettingsStore()
 const authStore = useAuthStore()
@@ -117,6 +117,17 @@ const handleDeleteAccount = async () => {
 const handleLogout = () => {
   authStore.logout()
 }
+
+const getLanguageName = (code) => {
+  const languages = {
+    'en': 'English',
+    'fr': 'Français',
+    'es': 'Español',
+    'de': 'Deutsch',
+    'ar': 'العربية'
+  }
+  return languages[code] || 'English'
+}
 </script>
 
 <template>
@@ -193,6 +204,42 @@ const handleLogout = () => {
           <div class="toggle" :class="{ active: settingsStore.enterToSend }">
             <div class="toggle-knob"></div>
           </div>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <h3>Language</h3>
+
+        <div class="setting-item">
+          <div class="setting-icon">
+            <Globe :size="22" />
+          </div>
+          <div class="setting-info">
+            <span class="setting-name">App Language</span>
+            <span class="setting-desc">{{ getLanguageName(settingsStore.language) }}</span>
+          </div>
+          <select v-model="settingsStore.language" @change="settingsStore.setLanguage(settingsStore.language)" class="language-select">
+            <option value="en">English</option>
+            <option value="fr">Français</option>
+            <option value="es">Español</option>
+            <option value="de">Deutsch</option>
+            <option value="ar">العربية</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <h3>Privacy</h3>
+
+        <div class="setting-item" @click="emit('show-blocked-contacts')">
+          <div class="setting-icon">
+            <UserX :size="22" />
+          </div>
+          <div class="setting-info">
+            <span class="setting-name">Blocked Contacts</span>
+            <span class="setting-desc">Manage blocked users</span>
+          </div>
+          <ChevronRight :size="20" class="chevron" />
         </div>
       </div>
 
@@ -307,13 +354,13 @@ const handleLogout = () => {
 .settings-view {
   width: 100%;
   height: 100%;
-  background: #f0f2f5;
+  background: var(--bg-primary);
   display: flex;
   flex-direction: column;
 }
 
 .settings-header {
-  background: #008069;
+  background: var(--accent-dark);
   color: white;
   padding: 60px 20px 20px;
   display: flex;
@@ -350,7 +397,7 @@ const handleLogout = () => {
   padding: 14px 20px 8px;
   margin: 0;
   font-size: 14px;
-  color: #008069;
+  color: var(--accent-dark);
   font-weight: 500;
 }
 
@@ -359,39 +406,39 @@ const handleLogout = () => {
   align-items: center;
   gap: 16px;
   padding: 14px 20px;
-  background: white;
+  background: var(--bg-secondary);
   cursor: pointer;
   transition: background 0.2s;
-  border-bottom: 1px solid #f0f2f5;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .setting-item:hover {
-  background: #f5f6f6;
+  background: var(--hover-color);
 }
 
 .setting-item.danger .setting-name {
-  color: #dc2626;
+  color: var(--danger-color);
 }
 
 .setting-icon {
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background: #f0f2f5;
+  background: var(--bg-tertiary);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #667781;
+  color: var(--text-secondary);
 }
 
 .setting-icon.active {
   background: #e7f8f5;
-  color: #00a884;
+  color: var(--accent-color);
 }
 
 .setting-icon.danger {
   background: #fee2e2;
-  color: #dc2626;
+  color: var(--danger-color);
 }
 
 .setting-info {
@@ -401,27 +448,29 @@ const handleLogout = () => {
 .setting-name {
   display: block;
   font-size: 16px;
-  color: #111b21;
+  color: var(--text-primary);
 }
 
 .setting-desc {
   display: block;
   font-size: 13px;
-  color: #667781;
+  color: var(--text-secondary);
   margin-top: 2px;
 }
 
 .toggle {
   width: 44px;
   height: 24px;
-  background: #d1d7db;
+  background: var(--text-secondary);
   border-radius: 12px;
   position: relative;
   transition: background 0.2s;
+  opacity: 0.5;
 }
 
 .toggle.active {
-  background: #00a884;
+  background: var(--accent-color);
+  opacity: 1;
 }
 
 .toggle-knob {
@@ -441,7 +490,7 @@ const handleLogout = () => {
 }
 
 .chevron {
-  color: #667781;
+  color: var(--text-secondary);
 }
 
 .modal-overlay {
@@ -458,7 +507,7 @@ const handleLogout = () => {
 }
 
 .modal-content {
-  background: white;
+  background: var(--bg-secondary);
   border-radius: 12px;
   padding: 24px;
   width: 90%;
@@ -468,15 +517,15 @@ const handleLogout = () => {
 .modal-content h3 {
   margin: 0 0 20px 0;
   font-size: 18px;
-  color: #111b21;
+  color: var(--text-primary);
 }
 
 .modal-content.danger h3 {
-  color: #dc2626;
+  color: var(--danger-color);
 }
 
 .warning-text {
-  color: #667781;
+  color: var(--text-secondary);
   font-size: 14px;
   margin-bottom: 20px;
 }
@@ -488,22 +537,24 @@ const handleLogout = () => {
 .form-group label {
   display: block;
   font-size: 14px;
-  color: #667781;
+  color: var(--text-secondary);
   margin-bottom: 8px;
 }
 
 .form-group input {
   width: 100%;
   padding: 12px;
-  border: 1px solid #e9edef;
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   font-size: 15px;
   box-sizing: border-box;
+  background: var(--bg-primary);
+  color: var(--text-primary);
 }
 
 .form-group input:focus {
   outline: none;
-  border-color: #00a884;
+  border-color: var(--accent-color);
 }
 
 .error-message {
@@ -534,14 +585,14 @@ const handleLogout = () => {
 .btn-cancel {
   background: none;
   border: none;
-  color: #667781;
+  color: var(--text-secondary);
   padding: 12px 24px;
   cursor: pointer;
   font-size: 15px;
 }
 
 .btn-save {
-  background: #00a884;
+  background: var(--accent-color);
   color: white;
   border: none;
   padding: 12px 24px;
@@ -555,7 +606,7 @@ const handleLogout = () => {
 }
 
 .btn-delete {
-  background: #dc2626;
+  background: var(--danger-color);
   color: white;
   border: none;
   padding: 12px 24px;
@@ -566,5 +617,20 @@ const handleLogout = () => {
 
 .btn-delete:disabled {
   opacity: 0.5;
+}
+
+.language-select {
+  padding: 8px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: 14px;
+  cursor: pointer;
+  outline: none;
+}
+
+.language-select:focus {
+  border-color: var(--accent-color);
 }
 </style>

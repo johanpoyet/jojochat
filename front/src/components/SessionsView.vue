@@ -146,13 +146,13 @@ const revokeAllSessions = async () => {
 .sessions-view {
   width: 100%;
   height: 100%;
-  background: #f0f2f5;
+  background: var(--bg-primary);
   display: flex;
   flex-direction: column;
 }
 
 .sessions-header {
-  background: #008069;
+  background: var(--accent-dark);
   color: white;
   padding: 60px 20px 20px;
   display: flex;
@@ -190,25 +190,25 @@ const revokeAllSessions = async () => {
 }
 
 .security-notice svg {
-  color: #00a884;
+  color: var(--accent-color);
   flex-shrink: 0;
 }
 
 .security-notice p {
   margin: 0;
   font-size: 14px;
-  color: #111b21;
+  color: var(--text-primary);
 }
 
 .loading {
   padding: 40px;
   text-align: center;
-  color: #667781;
+  color: var(--text-secondary);
 }
 
 .error-message {
   background: #fee2e2;
-  color: #dc2626;
+  color: var(--danger-color);
   padding: 12px 20px;
   margin: 10px;
   border-radius: 8px;
@@ -234,7 +234,7 @@ const revokeAllSessions = async () => {
 }
 
 .sessions-list {
-  background: white;
+  background: var(--bg-secondary);
   margin-top: 10px;
 }
 
@@ -243,18 +243,18 @@ const revokeAllSessions = async () => {
   align-items: center;
   gap: 16px;
   padding: 16px 20px;
-  border-bottom: 1px solid #f0f2f5;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .session-icon {
   width: 48px;
   height: 48px;
-  background: #f0f2f5;
+  background: var(--bg-tertiary);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #667781;
+  color: var(--text-secondary);
 }
 
 .session-info {
@@ -264,28 +264,28 @@ const revokeAllSessions = async () => {
 .session-device {
   display: block;
   font-size: 16px;
-  color: #111b21;
+  color: var(--text-primary);
   text-transform: capitalize;
 }
 
 .session-details {
   display: block;
   font-size: 13px;
-  color: #667781;
+  color: var(--text-secondary);
   margin-top: 2px;
 }
 
 .session-date {
   display: block;
   font-size: 12px;
-  color: #8696a0;
+  color: var(--text-secondary);
   margin-top: 2px;
 }
 
 .btn-revoke {
   background: none;
   border: none;
-  color: #dc2626;
+  color: var(--danger-color);
   cursor: pointer;
   padding: 8px;
 }
@@ -298,6 +298,6 @@ const revokeAllSessions = async () => {
 .no-sessions {
   padding: 40px;
   text-align: center;
-  color: #667781;
+  color: var(--text-secondary);
 }
 </style>

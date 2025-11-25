@@ -185,7 +185,7 @@ const getFileIcon = (file: File) => {
 
 <style scoped>
 .message-input-container {
-  background: #f0f2f5;
+  background: var(--bg-primary);
 }
 
 .file-preview {
@@ -193,8 +193,8 @@ const getFileIcon = (file: File) => {
   align-items: center;
   justify-content: space-between;
   padding: 10px;
-  background: #e9edef;
-  border-bottom: 1px solid #d1d7db;
+  background: var(--bg-tertiary);
+  border-bottom: 1px solid var(--border-color);
 }
 
 .preview-content {
@@ -214,7 +214,7 @@ const getFileIcon = (file: File) => {
   display: flex;
   align-items: center;
   gap: 8px;
-  color: #54656f;
+  color: var(--text-secondary);
 }
 
 .preview-file span {
@@ -228,13 +228,13 @@ const getFileIcon = (file: File) => {
 .btn-clear {
   background: none;
   border: none;
-  color: #54656f;
+  color: var(--text-secondary);
   cursor: pointer;
   padding: 8px;
 }
 
 .btn-clear:hover {
-  color: #dc2626;
+  color: var(--danger-color);
 }
 
 .message-input {
@@ -249,7 +249,7 @@ const getFileIcon = (file: File) => {
 .btn-icon {
   background: none;
   border: none;
-  color: #54656f;
+  color: var(--text-secondary);
   cursor: pointer;
   padding: 8px;
   display: flex;
@@ -259,7 +259,7 @@ const getFileIcon = (file: File) => {
 }
 
 .btn-icon:hover {
-  color: #128C7E;
+  color: var(--accent-color);
 }
 
 .btn-icon:disabled {
@@ -275,7 +275,7 @@ const getFileIcon = (file: File) => {
   position: absolute;
   bottom: 100%;
   left: 0;
-  background: white;
+  background: var(--bg-secondary);
   border-radius: 8px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
   overflow: hidden;
@@ -289,13 +289,13 @@ const getFileIcon = (file: File) => {
   gap: 12px;
   padding: 12px 16px;
   cursor: pointer;
-  color: #54656f;
+  color: var(--text-secondary);
   transition: background 0.2s;
 }
 
 .attach-option:hover {
-  background: #f0f2f5;
-  color: #128C7E;
+  background: var(--hover-color);
+  color: var(--accent-color);
 }
 
 .attach-option span {
@@ -305,7 +305,7 @@ const getFileIcon = (file: File) => {
 .message-input input {
   flex: 1;
   border: none;
-  background: white;
+  background: var(--bg-secondary);
   padding: 9px 12px;
   border-radius: 8px;
   font-size: 15px;
@@ -313,14 +313,15 @@ const getFileIcon = (file: File) => {
   font-family: inherit;
   min-height: 20px;
   line-height: 20px;
+  color: var(--text-primary);
 }
 
 .message-input input:disabled {
-  background: #e9edef;
+  background: var(--bg-tertiary);
   cursor: not-allowed;
 }
 
 .message-input input::placeholder {
-  color: #667781;
+  color: var(--text-secondary);
 }
 </style>

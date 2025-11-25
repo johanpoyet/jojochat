@@ -265,10 +265,18 @@ const getMediaUrl = (url) => {
   flex: 1;
   display: flex;
   flex-direction: column;
+  background: var(--bg-primary);
+  position: relative;
+}
+
+:root.dark-mode .chat-window {
+  background-image: none;
+}
+
+:root:not(.dark-mode) .chat-window {
   background: #efeae2;
   background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png');
   background-size: 412.5px 749.25px;
-  position: relative;
 }
 
 .empty-state {
@@ -277,38 +285,39 @@ const getMediaUrl = (url) => {
   justify-content: center;
   align-items: center;
   height: 100%;
-  color: #54656f;
-  background: #f0f2f5;
+  color: var(--text-secondary);
+  background: var(--bg-primary);
   border-bottom: 6px solid #25D366;
 }
 
 .empty-state i {
   font-size: 4rem;
   margin-bottom: 1rem;
-  color: #d9d9d9;
+  color: var(--text-secondary);
+  opacity: 0.5;
 }
 
 .empty-state h2 {
   margin: 0.5rem 0;
-  color: #41525d;
+  color: var(--text-primary);
   font-weight: 300;
   font-size: 32px;
 }
 
 .empty-state p {
-  color: #667781;
+  color: var(--text-secondary);
   font-size: 14px;
 }
 
 .chat-header {
-  background: #f0f2f5;
+  background: var(--bg-primary);
   padding: 10px 16px;
   height: 59px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   box-sizing: border-box;
-  border-bottom: 1px solid #d1d7db;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .header-info {
@@ -323,7 +332,7 @@ const getMediaUrl = (url) => {
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background: #dfe5e7;
+  background: var(--bg-tertiary);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -340,7 +349,7 @@ const getMediaUrl = (url) => {
 .user-details h3 {
   margin: 0;
   font-size: 16px;
-  color: #111b21;
+  color: var(--text-primary);
   font-weight: 400;
   line-height: normal;
 }
@@ -348,7 +357,7 @@ const getMediaUrl = (url) => {
 .user-details .status {
   margin: 0;
   font-size: 13px;
-  color: #667781;
+  color: var(--text-secondary);
   line-height: normal;
   min-height: 15px;
 }
@@ -362,7 +371,7 @@ const getMediaUrl = (url) => {
 .icon-btn {
   background: none;
   border: none;
-  color: #54656f;
+  color: var(--text-secondary);
   cursor: pointer;
   padding: 8px;
   border-radius: 50%;
@@ -372,7 +381,7 @@ const getMediaUrl = (url) => {
 }
 
 .icon-btn:hover {
-  background-color: rgba(0,0,0,0.05);
+  background-color: var(--hover-color);
 }
 
 .messages-container {
@@ -411,7 +420,7 @@ const getMediaUrl = (url) => {
 }
 
 .message.sent .message-bubble {
-  background: #d9fdd3;
+  background: var(--message-out);
   border-top-right-radius: 0;
 }
 
@@ -422,11 +431,11 @@ const getMediaUrl = (url) => {
   right: -8px;
   width: 8px;
   height: 13px;
-  background: linear-gradient(to top left, rgba(0,0,0,0) 50%, #d9fdd3 50%);
+  background: linear-gradient(to top left, rgba(0,0,0,0) 50%, var(--message-out) 50%);
 }
 
 .message.received .message-bubble {
-  background: white;
+  background: var(--message-in);
   border-top-left-radius: 0;
 }
 
@@ -437,13 +446,13 @@ const getMediaUrl = (url) => {
   left: -8px;
   width: 8px;
   height: 13px;
-  background: linear-gradient(to top right, rgba(0,0,0,0) 50%, white 50%);
+  background: linear-gradient(to top right, rgba(0,0,0,0) 50%, var(--message-in) 50%);
 }
 
 .message-bubble p {
   margin: 0 0 4px 0;
   word-wrap: break-word;
-  color: #111b21;
+  color: var(--text-primary);
   font-size: 14.2px;
   line-height: 19px;
 }
@@ -462,13 +471,13 @@ const getMediaUrl = (url) => {
 
 .time {
   font-size: 11px;
-  color: #667781;
+  color: var(--text-secondary);
 }
 
 .status-icon {
   display: flex;
   align-items: center;
-  color: #667781;
+  color: var(--text-secondary);
 }
 
 .status-icon .read {
@@ -481,7 +490,7 @@ const getMediaUrl = (url) => {
 
 .deleted-text {
   font-style: italic;
-  color: #667781;
+  color: var(--text-secondary);
 }
 
 .message-image {

@@ -20,6 +20,8 @@ const showSearch = ref(false)
 const searchQuery = ref('')
 const searchResults = ref([])
 const searchLoading = ref(false)
+const replyingTo = ref(null)
+const hoveredMessage = ref(null)
 
 const commonEmojis = ['👍', '❤️', '😂', '😮', '😢', '🙏']
 
@@ -540,6 +542,7 @@ const getMediaUrl = (url) => {
 }
 
 :root.dark-mode .chat-window {
+  background: #0b141a;
   background-image: none;
 }
 
@@ -704,6 +707,16 @@ const getMediaUrl = (url) => {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  background-color: #efeae2;
+  background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png');
+  position: relative;
+}
+
+:root.dark-mode .messages-container {
+  background-color: #0b141a;
+  background-image:
+    linear-gradient(rgba(11, 20, 26, 0.85), rgba(11, 20, 26, 0.85)),
+    url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png');
 }
 
 .message {

@@ -2,7 +2,7 @@
 import { ref, nextTick, watch } from 'vue'
 import { useChatStore } from '../stores/chat'
 import { useAuthStore } from '../stores/auth'
-import { Search, MoreVertical, Check, CheckCheck, Smile, Edit2, Trash2, X } from 'lucide-vue-next'
+import { Search, MoreVertical, Check, CheckCheck, Smile, Edit2, Trash2, X, Ban } from 'lucide-vue-next'
 import MessageInput from './MessageInput.vue'
 import TypingIndicator from './TypingIndicator.vue'
 
@@ -13,8 +13,38 @@ const showReactionPicker = ref(null)
 const editingMessage = ref(null)
 const editContent = ref('')
 const contextMenu = ref({ show: false, message: null, x: 0, y: 0 })
+const showHeaderMenu = ref(false)
+const confirmModal = ref({ show: false, title: '', message: '', onConfirm: null })
+const alertModal = ref({ show: false, title: '', message: '' })
+const showSearch = ref(false)
+const searchQuery = ref('')
+const searchResults = ref([])
+const searchLoading = ref(false)
 
 const commonEmojis = ['👍', '❤️', '😂', '😮', '😢', '🙏']
+
+const showConfirm = (title, message, onConfirm) => {
+  confirmModal.value = { show: true, title, message, onConfirm }
+}
+
+const closeConfirm = () => {
+  confirmModal.value = { show: false, title: '', message: '', onConfirm: null }
+}
+
+const handleConfirm = () => {
+  if (confirmModal.value.onConfirm) {
+    confirmModal.value.onConfirm()
+  }
+  closeConfirm()
+}
+
+const showAlert = (title, message) => {
+  alertModal.value = { show: true, title, message }
+}
+
+const closeAlert = () => {
+  alertModal.value = { show: false, title: '', message: '' }
+}
 
 const scrollToBottom = () => {
   nextTick(() => {
@@ -117,6 +147,119 @@ const deleteMessage = (message) => {
   closeContextMenu()
 }
 
+const toggleHeaderMenu = () => {
+  showHeaderMenu.value = !showHeaderMenu.value
+}
+
+const closeHeaderMenu = () => {
+  showHeaderMenu.value = false
+}
+
+const blockContact = () => {
+  if (!chatStore.selectedUser) return
+
+  closeHeaderMenu()
+
+  const userId = chatStore.selectedUser.id || chatStore.selectedUser._id
+  const username = chatStore.selectedUser.username
+
+  showConfirm(
+    'Block Contact',
+    `Are you sure you want to block ${username}? You won't receive messages from them.`,
+    async () => {
+      try {
+        const response = await fetch(`${authStore.API_URL}/api/users/block/${userId}`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${authStore.token}` }
+        })
+
+        if (response.ok) {
+          // Clear the chat immediately
+          chatStore.selectedUser = null
+          chatStore.selectedGroup = null
+          chatStore.messages = []
+
+          // Show success message after clearing
+          showAlert('Success', `${username} has been blocked`)
+        } else {
+          const data = await response.json()
+          showAlert('Error', data.error || 'Failed to block contact')
+        }
+      } catch (err) {
+        console.error('Block error:', err)
+        showAlert('Error', 'Network error. Please try again.')
+      }
+    }
+  )
+}
+
+const toggleSearch = () => {
+  showSearch.value = !showSearch.value
+  if (!showSearch.value) {
+    searchQuery.value = ''
+    searchResults.value = []
+  }
+}
+
+const performSearch = async () => {
+  if (!searchQuery.value || searchQuery.value.trim().length === 0) {
+    searchResults.value = []
+    return
+  }
+
+  searchLoading.value = true
+
+  try {
+    const conversationId = chatStore.selectedGroup
+      ? `group-${chatStore.selectedGroup._id}`
+      : chatStore.selectedUser?.id || chatStore.selectedUser?._id
+
+    if (!conversationId) {
+      console.error('No conversation selected')
+      searchLoading.value = false
+      return
+    }
+
+    const params = new URLSearchParams({
+      query: searchQuery.value,
+      conversationId
+    })
+
+    const response = await fetch(`${authStore.API_URL}/api/messages/search?${params}`, {
+      headers: { 'Authorization': `Bearer ${authStore.token}` }
+    })
+
+    const data = await response.json()
+
+    if (response.ok) {
+      searchResults.value = data.messages
+    } else {
+      console.error('Search error:', data.error)
+    }
+  } catch (error) {
+    console.error('Search error:', error)
+  } finally {
+    searchLoading.value = false
+  }
+}
+
+const scrollToMessage = (messageId) => {
+  showSearch.value = false
+  searchQuery.value = ''
+  searchResults.value = []
+
+  nextTick(() => {
+    const messageElement = document.getElementById(`message-${messageId}`)
+    if (messageElement) {
+      messageElement.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      messageElement.classList.add('highlight')
+      setTimeout(() => {
+        messageElement.classList.remove('highlight')
+      }, 2000)
+    }
+  })
+}
+
 const isImage = (message) => message.type === 'image' && message.mediaUrl
 const isVideo = (message) => message.type === 'video' && message.mediaUrl
 const isDocument = (message) => message.type === 'document' && message.mediaUrl
@@ -165,19 +308,66 @@ const getMediaUrl = (url) => {
           </div>
         </div>
         <div class="header-actions">
-          <button class="icon-btn" title="Search">
+          <button class="icon-btn" title="Search" @click="toggleSearch">
             <Search :size="24" />
           </button>
-          <button class="icon-btn" title="Menu">
-            <MoreVertical :size="24" />
-          </button>
+          <div class="menu-wrapper">
+            <button class="icon-btn" title="Menu" @click="toggleHeaderMenu">
+              <MoreVertical :size="24" />
+            </button>
+            <div v-if="showHeaderMenu" class="header-dropdown-menu">
+              <button v-if="chatStore.selectedUser" @click="blockContact" class="menu-item danger">
+                <Ban :size="18" />
+                <span>Block Contact</span>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div ref="messagesContainer" class="messages-container" @click="closeContextMenu">
+      <!-- Search Panel -->
+      <div v-if="showSearch" class="search-panel">
+        <div class="search-header">
+          <h3>Search Messages</h3>
+          <button @click="toggleSearch" class="close-search">
+            <X :size="20" />
+          </button>
+        </div>
+        <div class="search-input-container">
+          <Search :size="18" class="search-icon" />
+          <input
+            v-model="searchQuery"
+            @input="performSearch"
+            type="text"
+            placeholder="Search in conversation..."
+            class="search-input"
+          />
+        </div>
+        <div class="search-results">
+          <div v-if="searchLoading" class="search-loading">Searching...</div>
+          <div v-else-if="searchQuery && searchResults.length === 0" class="search-empty">
+            No messages found
+          </div>
+          <div v-else-if="searchResults.length > 0" class="search-results-list">
+            <div
+              v-for="result in searchResults"
+              :key="result._id"
+              @click="scrollToMessage(result._id)"
+              class="search-result-item"
+            >
+              <div class="result-sender">{{ result.sender.username }}</div>
+              <div class="result-content">{{ result.content }}</div>
+              <div class="result-date">{{ formatTime(result.createdAt) }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div ref="messagesContainer" class="messages-container" @click="closeContextMenu(); closeHeaderMenu()">
         <div
           v-for="message in chatStore.messages"
           :key="message._id"
+          :id="`message-${message._id}`"
           class="message"
           :class="{
             sent: message.sender._id === authStore.user.id,
@@ -257,6 +447,43 @@ const getMediaUrl = (url) => {
 
       <MessageInput />
     </template>
+
+    <!-- Confirm Modal -->
+    <div v-if="confirmModal.show" class="modal-overlay" @click="closeConfirm">
+      <div class="custom-modal" @click.stop>
+        <div class="modal-header">
+          <h3>{{ confirmModal.title }}</h3>
+          <button @click="closeConfirm" class="modal-close">
+            <X :size="20" />
+          </button>
+        </div>
+        <div class="modal-body-text">
+          {{ confirmModal.message }}
+        </div>
+        <div class="modal-footer-buttons">
+          <button @click="closeConfirm" class="modal-btn modal-btn-cancel">Cancel</button>
+          <button @click="handleConfirm" class="modal-btn modal-btn-confirm">Confirm</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Alert Modal -->
+    <div v-if="alertModal.show" class="modal-overlay" @click="closeAlert">
+      <div class="custom-modal" @click.stop>
+        <div class="modal-header">
+          <h3>{{ alertModal.title }}</h3>
+          <button @click="closeAlert" class="modal-close">
+            <X :size="20" />
+          </button>
+        </div>
+        <div class="modal-body-text">
+          {{ alertModal.message }}
+        </div>
+        <div class="modal-footer-buttons">
+          <button @click="closeAlert" class="modal-btn modal-btn-primary">OK</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -366,6 +593,49 @@ const getMediaUrl = (url) => {
   display: flex;
   gap: 10px;
   align-items: center;
+}
+
+.menu-wrapper {
+  position: relative;
+}
+
+.header-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: var(--bg-secondary);
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  min-width: 200px;
+  z-index: 1000;
+  overflow: hidden;
+}
+
+.header-dropdown-menu .menu-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  font-size: 15px;
+  cursor: pointer;
+  transition: background 0.2s;
+  text-align: left;
+}
+
+.header-dropdown-menu .menu-item:hover {
+  background: var(--hover-color);
+}
+
+.header-dropdown-menu .menu-item.danger {
+  color: var(--danger-color);
+}
+
+.header-dropdown-menu .menu-item.danger:hover {
+  background: rgba(239, 83, 80, 0.1);
 }
 
 .icon-btn {
@@ -695,5 +965,305 @@ const getMediaUrl = (url) => {
 
 .context-menu button.danger {
   color: #dc2626;
+}
+
+/* Custom Modals */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.custom-modal {
+  background: var(--bg-secondary);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  width: 90%;
+  max-width: 400px;
+  overflow: hidden;
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s;
+}
+
+.modal-close:hover {
+  background: var(--hover-color);
+  color: var(--text-primary);
+}
+
+.modal-body-text {
+  padding: 24px;
+  color: var(--text-primary);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.modal-footer-buttons {
+  display: flex;
+  gap: 12px;
+  padding: 16px 24px;
+  justify-content: flex-end;
+  border-top: 1px solid var(--border-color);
+}
+
+.modal-btn {
+  padding: 10px 24px;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+  outline: none;
+}
+
+.modal-btn-cancel {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.modal-btn-cancel:hover {
+  background: var(--hover-color);
+}
+
+.modal-btn-confirm {
+  background: var(--danger-color);
+  color: white;
+}
+
+.modal-btn-confirm:hover {
+  background: #c53030;
+}
+
+.modal-btn-primary {
+  background: var(--accent-color);
+  color: white;
+}
+
+.modal-btn-primary:hover {
+  background: var(--accent-dark);
+}
+
+/* Search Panel Styles */
+.search-panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 350px;
+  height: 100%;
+  background: var(--bg-primary);
+  border-left: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  z-index: 10;
+  box-shadow: -2px 0 8px rgba(0, 0, 0, 0.1);
+}
+
+.search-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-primary);
+}
+
+.search-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.close-search-btn {
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.close-search-btn:hover {
+  background: var(--hover-color);
+}
+
+.search-input-container {
+  padding: 16px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.search-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.search-input-wrapper .icon {
+  position: absolute;
+  left: 12px;
+  font-size: 18px;
+  color: var(--text-secondary);
+}
+
+.search-input-container input {
+  width: 100%;
+  padding: 10px 12px 10px 40px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: 14px;
+  transition: border-color 0.2s;
+}
+
+.search-input-container input:focus {
+  outline: none;
+  border-color: var(--accent-color);
+}
+
+.search-input-container input::placeholder {
+  color: var(--text-secondary);
+}
+
+.search-results-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+}
+
+.search-result-item {
+  padding: 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  margin-bottom: 4px;
+  border: 1px solid transparent;
+}
+
+.search-result-item:hover {
+  background: var(--hover-color);
+  border-color: var(--border-color);
+}
+
+.search-result-sender {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.search-result-content {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.search-result-date {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.search-loading,
+.search-no-results {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 16px;
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+.search-loading .icon,
+.search-no-results .icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+  opacity: 0.5;
+}
+
+.highlight {
+  animation: highlightMessage 2s ease;
+}
+
+@keyframes highlightMessage {
+  0% {
+    background: var(--accent-color);
+    opacity: 0.3;
+  }
+  50% {
+    background: var(--accent-color);
+    opacity: 0.5;
+  }
+  100% {
+    background: transparent;
+    opacity: 1;
+  }
 }
 </style>

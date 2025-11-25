@@ -25,6 +25,17 @@ const createMessage = async (req, res) => {
       return res.status(400).json({ error: 'Cannot send message to yourself' });
     }
 
+    // Check if sender is blocked by recipient
+    if (recipient.blockedUsers && recipient.blockedUsers.includes(senderId)) {
+      return res.status(403).json({ error: 'Cannot send message to this user' });
+    }
+
+    // Check if recipient is blocked by sender
+    const sender = await User.findById(senderId);
+    if (sender.blockedUsers && sender.blockedUsers.includes(recipient_id)) {
+      return res.status(403).json({ error: 'Cannot send message to this user' });
+    }
+
     const message = await Message.create({
       sender: senderId,
       recipient: recipient_id,
@@ -262,11 +273,80 @@ const getGroupMessages = async (req, res) => {
   }
 };
 
+const searchMessages = async (req, res) => {
+  try {
+    const { query, conversationId, senderId } = req.query;
+    const currentUserId = req.user._id;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const skip = (page - 1) * limit;
+
+    if (!query || query.trim().length === 0) {
+      return res.status(400).json({ error: 'Search query is required' });
+    }
+
+    // Build search filter
+    const filter = {
+      deleted: false,
+      content: { $regex: query, $options: 'i' }
+    };
+
+    // Filter by conversation (user or group)
+    if (conversationId) {
+      const isGroup = conversationId.startsWith('group-');
+      if (isGroup) {
+        const groupId = conversationId.replace('group-', '');
+        filter.group = groupId;
+      } else {
+        filter.$or = [
+          { sender: currentUserId, recipient: conversationId },
+          { sender: conversationId, recipient: currentUserId }
+        ];
+      }
+    } else {
+      // Search in all user's conversations
+      filter.$or = [
+        { sender: currentUserId },
+        { recipient: currentUserId }
+      ];
+    }
+
+    // Filter by sender
+    if (senderId) {
+      filter.sender = senderId;
+    }
+
+    const messages = await Message.find(filter)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .populate('sender', 'username avatar')
+      .populate('recipient', 'username avatar')
+      .populate('group', 'name avatar');
+
+    const total = await Message.countDocuments(filter);
+
+    res.json({
+      messages,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit)
+      }
+    });
+  } catch (error) {
+    console.error('Search messages error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
 module.exports = {
   createMessage,
   getMessagesByUser,
   getGroupMessages,
   updateMessage,
   deleteMessage,
-  markAsRead
+  markAsRead,
+  searchMessages
 };

@@ -237,6 +237,35 @@ const uploadAvatar = async (req, res) => {
     });
   } catch (error) {
     console.error('Upload avatar error:', error);
+const blockUser = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const { id: blockedUserId } = req.params;
+
+    if (userId.toString() === blockedUserId) {
+      return res.status(400).json({ error: 'You cannot block yourself' });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const blockedUser = await User.findById(blockedUserId);
+    if (!blockedUser) {
+      return res.status(404).json({ error: 'User to block not found' });
+    }
+
+    if (user.blockedUsers.includes(blockedUserId)) {
+      return res.status(400).json({ error: 'User is already blocked' });
+    }
+
+    user.blockedUsers.push(blockedUserId);
+    await user.save();
+
+    res.json({ message: 'User blocked successfully' });
+  } catch (error) {
+    console.error('Block user error:', error);
     res.status(500).json({ error: 'Server error' });
   }
 };
@@ -274,6 +303,11 @@ const deleteAccount = async (req, res) => {
     const { password } = req.body;
 
     // Verify password
+const unblockUser = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const { id: blockedUserId } = req.params;
+
     const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
@@ -304,6 +338,41 @@ const deleteAccount = async (req, res) => {
     res.json({ message: 'Account deleted successfully' });
   } catch (error) {
     console.error('Delete account error:', error);
+    if (!user.blockedUsers.includes(blockedUserId)) {
+      return res.status(400).json({ error: 'User is not blocked' });
+    }
+
+    user.blockedUsers = user.blockedUsers.filter(
+      id => id.toString() !== blockedUserId
+    );
+    await user.save();
+
+    res.json({ message: 'User unblocked successfully' });
+  } catch (error) {
+    console.error('Unblock user error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
+const getBlockedUsers = async (req, res) => {
+  try {
+    const userId = req.user._id;
+
+    const user = await User.findById(userId).populate('blockedUsers', '-password');
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const blockedUsers = user.blockedUsers.map(blockedUser => ({
+      _id: blockedUser._id,
+      username: blockedUser.username,
+      email: blockedUser.email,
+      avatar: blockedUser.avatar
+    }));
+
+    res.json({ blockedUsers });
+  } catch (error) {
+    console.error('Get blocked users error:', error);
     res.status(500).json({ error: 'Server error' });
   }
 };
@@ -318,5 +387,8 @@ module.exports = {
   deactivateSession,
   uploadAvatar,
   deleteAvatar,
-  deleteAccount
+  deleteAccount,
+  blockUser,
+  unblockUser,
+  getBlockedUsers
 };

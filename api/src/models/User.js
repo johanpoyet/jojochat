@@ -38,7 +38,11 @@ const userSchema = new mongoose.Schema({
   lastConnection: {
     type: Date,
     default: null
-  }
+  },
+  blockedUsers: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  }]
 }, {
   timestamps: true
 });

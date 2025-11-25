@@ -511,6 +511,25 @@ const socketHandler = (io) => {
         message.deletedAt = new Date();
         await message.save();
 
+        if (message.recipient) {
+          const conversation = await Conversation.findOne({
+            participants: { $all: [message.sender, message.recipient] }
+          });
+
+          if (conversation && conversation.lastMessage && conversation.lastMessage.toString() === message_id) {
+            const lastNonDeletedMessage = await Message.findOne({
+              $or: [
+                { sender: message.sender, recipient: message.recipient },
+                { sender: message.recipient, recipient: message.sender }
+              ],
+              deleted: false
+            }).sort({ createdAt: -1 });
+
+            conversation.lastMessage = lastNonDeletedMessage ? lastNonDeletedMessage._id : null;
+            await conversation.save();
+          }
+        }
+
         const deleteData = { message_id };
 
         socket.emit('message-deleted', deleteData);

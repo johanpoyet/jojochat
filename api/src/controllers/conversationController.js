@@ -15,7 +15,8 @@ const getConversations = async (req, res) => {
       .populate('participants', 'username avatar status blockedUsers')
       .populate({
         path: 'lastMessage',
-        select: 'content createdAt sender recipient'
+        select: 'content createdAt sender recipient deleted',
+        match: { deleted: { $ne: true } }
       })
       .sort({ updatedAt: -1 });
 
@@ -52,7 +53,7 @@ const getConversations = async (req, res) => {
             avatar: otherUser.avatar,
             status: otherUser.status
           },
-          lastMessage: conv.lastMessage ? {
+          lastMessage: conv.lastMessage && !conv.lastMessage.deleted ? {
             content: conv.lastMessage.content,
             createdAt: conv.lastMessage.createdAt,
             isSender: conv.lastMessage.sender.toString() === userId.toString()

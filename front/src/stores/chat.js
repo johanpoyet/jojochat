@@ -219,12 +219,13 @@ export const useChatStore = defineStore('chat', () => {
       }
     })
 
-    authStore.socket.on('message-deleted', (data) => {
+    authStore.socket.on('message-deleted', async (data) => {
       const message = messages.value.find(m => m._id === data.message_id)
       if (message) {
         message.deleted = true
         message.content = 'This message was deleted'
       }
+      await getConversations()
     })
   }
 

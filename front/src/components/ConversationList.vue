@@ -234,9 +234,12 @@ const isUserTyping = (userId) => {
             <p v-if="isUserTyping(conv.otherUser.id)" class="typing-text">
               typing...
             </p>
-            <p v-else-if="conv.lastMessage">
+            <p v-else-if="conv.lastMessage && !conv.lastMessage.deleted">
               {{ conv.lastMessage.isSender ? 'You: ' : '' }}
               {{ conv.lastMessage.content }}
+            </p>
+            <p v-else-if="conv.lastMessage && conv.lastMessage.deleted" class="deleted-message-preview">
+              Message supprimé
             </p>
             <span v-if="conv.unreadCount > 0" class="unread-badge">
               {{ conv.unreadCount }}
@@ -577,6 +580,12 @@ const isUserTyping = (userId) => {
 .typing-text {
   color: var(--accent-color) !important;
   font-weight: 500;
+}
+
+.deleted-message-preview {
+  font-style: italic;
+  color: var(--text-secondary);
+  opacity: 0.7;
 }
 
 .unread-badge {

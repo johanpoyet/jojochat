@@ -249,9 +249,10 @@ const revokeAllSessions = async () => {
   display: flex;
   gap: 16px;
   padding: 20px;
-  background: #e7f8f5;
+  background: var(--bg-tertiary);
   margin: 10px;
   border-radius: 8px;
+  border: 1px solid var(--border-color);
 }
 
 .security-notice svg {
@@ -272,19 +273,21 @@ const revokeAllSessions = async () => {
 }
 
 .error-message {
-  background: #fee2e2;
+  background: var(--bg-tertiary);
   color: var(--danger-color);
   padding: 12px 20px;
   margin: 10px;
   border-radius: 8px;
+  border: 1px solid var(--danger-color);
 }
 
 .success-message {
-  background: #d1fae5;
-  color: #059669;
+  background: var(--bg-tertiary);
+  color: var(--accent-color);
   padding: 12px 20px;
   margin: 10px;
   border-radius: 8px;
+  border: 1px solid var(--accent-color);
 }
 
 .revoke-all {
@@ -294,16 +297,18 @@ const revokeAllSessions = async () => {
 .btn-revoke-all {
   width: 100%;
   padding: 12px;
-  background: #fee2e2;
-  color: #dc2626;
-  border: none;
+  background: var(--bg-tertiary);
+  color: var(--danger-color);
+  border: 1px solid var(--danger-color);
   border-radius: 8px;
   font-size: 15px;
   cursor: pointer;
+  transition: all 0.2s;
 }
 
 .btn-revoke-all:hover {
-  background: #fecaca;
+  background: var(--hover-color);
+  opacity: 0.9;
 }
 
 .sessions-list {
@@ -320,7 +325,7 @@ const revokeAllSessions = async () => {
 }
 
 .session-item.current-session {
-  background: #e7f8f5;
+  background: var(--bg-tertiary);
 }
 
 .session-header {
@@ -383,7 +388,7 @@ const revokeAllSessions = async () => {
 }
 
 .btn-revoke:hover:not(:disabled) {
-  background: #fee2e2;
+  background: var(--hover-color);
   border-radius: 50%;
 }
 

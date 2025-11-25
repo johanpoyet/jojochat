@@ -15,6 +15,9 @@ const socketHandler = require('./socket/socketHandler');
 const path = require('path');
 
 const app = express();
+// initialize Sentry (if configured)
+const { initSentry, Sentry } = require('./config/sentry');
+initSentry(app);
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
@@ -26,6 +29,12 @@ const io = new Server(server, {
 
 if (process.env.NODE_ENV !== 'test') {
   connectDB();
+}
+
+// Sentry request/tracing handlers should come early in the middleware chain
+if (process.env.SENTRY_DSN) {
+  app.use(Sentry.Handlers.requestHandler());
+  app.use(Sentry.Handlers.tracingHandler());
 }
 
 app.use(cors({
@@ -59,6 +68,32 @@ const PORT = process.env.PORT || 3000;
 if (process.env.NODE_ENV !== 'test') {
   server.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
+  });
+}
+
+// Sentry error handler should be registered after all routes/middlewares
+if (process.env.SENTRY_DSN) {
+  app.use(Sentry.Handlers.errorHandler());
+
+  // capture unhandled rejections and uncaught exceptions
+  process.on('unhandledRejection', (reason) => {
+    try {
+      Sentry.captureException(reason);
+      // best-effort flush before exit in some deploy scenarios
+      Sentry.flush(2000).then(() => {});
+    } catch (e) {
+      console.error('Failed to report unhandledRejection to Sentry', e);
+    }
+  });
+
+  process.on('uncaughtException', (err) => {
+    try {
+      Sentry.captureException(err);
+      Sentry.flush(2000).then(() => process.exit(1));
+    } catch (e) {
+      console.error('Failed to report uncaughtException to Sentry', e);
+      process.exit(1);
+    }
   });
 }
 

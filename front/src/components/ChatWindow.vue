@@ -23,6 +23,8 @@ const searchQuery = ref('')
 const searchResults = ref([])
 const searchLoading = ref(false)
 const searchInAllConversations = ref(false)
+const replyingTo = ref(null)
+const hoveredMessage = ref(null)
 
 const commonEmojis = ['👍', '❤️', '😂', '😮', '😢', '🙏']
 
@@ -297,6 +299,15 @@ const scrollToMessage = async (result) => {
   }
 }
 
+const setReplyTo = (message) => {
+  replyingTo.value = message
+  contextMenu.value.show = false
+}
+
+const cancelReply = () => {
+  replyingTo.value = null
+}
+
 const isImage = (message) => message.type === 'image' && message.mediaUrl
 const isVideo = (message) => message.type === 'video' && message.mediaUrl
 const isDocument = (message) => message.type === 'document' && message.mediaUrl
@@ -422,13 +433,29 @@ const getMediaUrl = (url) => {
             deleted: message.deleted
           }"
           @contextmenu="showContextMenu($event, message)"
+          @mouseenter="hoveredMessage = message._id"
+          @mouseleave="hoveredMessage = null"
         >
           <div class="message-wrapper">
             <button class="btn-react" @click.stop="toggleReactionPicker(message._id)">
               <Smile :size="16" />
             </button>
 
+            <button
+              v-if="hoveredMessage === message._id && !message.deleted"
+              class="btn-reply"
+              @click.stop="setReplyTo(message)"
+              title="Reply"
+            >
+              ↩
+            </button>
+
             <div class="message-bubble">
+              <!-- Display replied message if exists -->
+              <div v-if="message.replyTo" class="replied-message" @click="scrollToMessage(message.replyTo)">
+                <div class="reply-sender">{{ message.replyTo.sender?.username || 'Unknown' }}</div>
+                <div class="reply-content">{{ message.replyTo.content || 'Message deleted' }}</div>
+              </div>
               <img v-if="isImage(message)" :src="getMediaUrl(message.mediaUrl)" class="message-image" alt="Image" />
               <video v-else-if="isVideo(message)" :src="getMediaUrl(message.mediaUrl)" controls class="message-video"></video>
               <a v-else-if="isDocument(message)" :href="getMediaUrl(message.mediaUrl)" target="_blank" class="message-document">
@@ -484,6 +511,9 @@ const getMediaUrl = (url) => {
         :style="{ top: contextMenu.y + 'px', left: contextMenu.x + 'px' }"
         @click.stop
       >
+        <button @click="setReplyTo(contextMenu.message)">
+          ↩ Reply
+        </button>
         <button @click="startEditMessage(contextMenu.message)">
           <Edit2 :size="16" /> Edit
         </button>
@@ -492,7 +522,20 @@ const getMediaUrl = (url) => {
         </button>
       </div>
 
-      <MessageInput />
+      <!-- Reply Preview -->
+      <div v-if="replyingTo" class="reply-preview">
+        <div class="reply-preview-content">
+          <div class="reply-preview-header">
+            <span>Replying to {{ replyingTo.sender.username }}</span>
+          </div>
+          <div class="reply-preview-text">{{ replyingTo.content }}</div>
+        </div>
+        <button @click="cancelReply" class="reply-preview-close">
+          <X :size="16" />
+        </button>
+      </div>
+
+      <MessageInput :replyTo="replyingTo" @message-sent="cancelReply" />
     </template>
 
     <!-- Confirm Modal -->
@@ -896,7 +939,8 @@ const getMediaUrl = (url) => {
   flex-direction: row-reverse;
 }
 
-.btn-react {
+.btn-react,
+.btn-reply {
   background: white;
   border: none;
   border-radius: 50%;
@@ -911,11 +955,18 @@ const getMediaUrl = (url) => {
   flex-shrink: 0;
 }
 
-.btn-react:hover {
+.btn-react:hover,
+.btn-reply:hover {
   background: #e9edef;
 }
 
-.message:hover .btn-react {
+.btn-reply {
+  font-size: 18px;
+  font-weight: bold;
+}
+
+.message:hover .btn-react,
+.message:hover .btn-reply {
   display: flex;
 }
 
@@ -1366,5 +1417,92 @@ const getMediaUrl = (url) => {
     background: transparent;
     opacity: 1;
   }
+}
+
+/* Reply Styles */
+.replied-message {
+  background: rgba(0, 0, 0, 0.05);
+  border-left: 3px solid var(--accent-color);
+  padding: 8px 10px;
+  margin-bottom: 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.replied-message:hover {
+  background: rgba(0, 0, 0, 0.08);
+}
+
+.message.sent .replied-message {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.message.sent .replied-message:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.reply-sender {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent-color);
+  margin-bottom: 2px;
+}
+
+.reply-content {
+  font-size: 13px;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.reply-preview {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border-color);
+  border-left: 3px solid var(--accent-color);
+}
+
+.reply-preview-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.reply-preview-header {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent-color);
+  margin-bottom: 4px;
+}
+
+.reply-preview-text {
+  font-size: 13px;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.reply-preview-close {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background 0.2s;
+  flex-shrink: 0;
+  margin-left: 8px;
+}
+
+.reply-preview-close:hover {
+  background: var(--hover-color);
 }
 </style>

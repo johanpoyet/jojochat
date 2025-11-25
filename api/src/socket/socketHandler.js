@@ -61,7 +61,7 @@ const socketHandler = (io) => {
 
     socket.on('send-message', async (data) => {
       try {
-        const { recipient_id, content, type = 'text', mediaUrl = null } = data;
+        const { recipient_id, content, type = 'text', mediaUrl = null, replyTo = null } = data;
 
         if (!recipient_id) {
           return socket.emit('error', { message: 'Recipient is required' });
@@ -98,6 +98,7 @@ const socketHandler = (io) => {
             content: content || '',
             type,
             mediaUrl,
+            ...(replyTo && { replyTo }),
             status: 'sent'
           });
         });
@@ -116,7 +117,11 @@ const socketHandler = (io) => {
 
         const populatedMessage = await Message.findById(message._id)
           .populate('sender', 'username avatar')
-          .populate('recipient', 'username avatar');
+          .populate('recipient', 'username avatar')
+          .populate({
+            path: 'replyTo',
+            populate: { path: 'sender', select: 'username avatar' }
+          });
 
         socket.emit('message-sent', populatedMessage);
 
@@ -320,7 +325,10 @@ const socketHandler = (io) => {
         const populatedMessage = await Message.findById(message._id)
           .populate('sender', 'username avatar')
           .populate('group', 'name avatar')
-          .populate('replyTo');
+          .populate({
+            path: 'replyTo',
+            populate: { path: 'sender', select: 'username avatar' }
+          });
 
         console.log('[send-group-message] Emitting message-sent');
         socket.emit('message-sent', populatedMessage);

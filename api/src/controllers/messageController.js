@@ -5,7 +5,7 @@ const Group = require('../models/Group');
 
 const createMessage = async (req, res) => {
   try {
-    const { recipient_id, content } = req.body;
+    const { recipient_id, content, replyTo } = req.body;
     const senderId = req.user._id;
 
     if (!recipient_id || !content) {
@@ -36,11 +36,20 @@ const createMessage = async (req, res) => {
       return res.status(403).json({ error: 'Cannot send message to this user' });
     }
 
+    // Verify replyTo message exists if provided
+    if (replyTo) {
+      const replyToMessage = await Message.findById(replyTo);
+      if (!replyToMessage) {
+        return res.status(404).json({ error: 'Reply message not found' });
+      }
+    }
+
     const message = await Message.create({
       sender: senderId,
       recipient: recipient_id,
       content,
-      status: 'sent'
+      status: 'sent',
+      ...(replyTo && { replyTo })
     });
 
     const conversation = await Conversation.findOrCreate(senderId.toString(), recipient_id);
@@ -51,7 +60,11 @@ const createMessage = async (req, res) => {
 
     const populatedMessage = await Message.findById(message._id)
       .populate('sender', 'username avatar')
-      .populate('recipient', 'username avatar');
+      .populate('recipient', 'username avatar')
+      .populate({
+        path: 'replyTo',
+        populate: { path: 'sender', select: 'username avatar' }
+      });
 
     res.status(201).json(populatedMessage);
   } catch (error) {
@@ -83,7 +96,11 @@ const getMessagesByUser = async (req, res) => {
       .skip(skip)
       .limit(limit)
       .populate('sender', 'username avatar')
-      .populate('recipient', 'username avatar');
+      .populate('recipient', 'username avatar')
+      .populate({
+        path: 'replyTo',
+        populate: { path: 'sender', select: 'username avatar' }
+      });
 
     await Message.updateMany(
       {
@@ -252,7 +269,10 @@ const getGroupMessages = async (req, res) => {
       .skip(skip)
       .limit(limit)
       .populate('sender', 'username avatar')
-      .populate('replyTo');
+      .populate({
+        path: 'replyTo',
+        populate: { path: 'sender', select: 'username avatar' }
+      });
 
     const total = await Message.countDocuments({
       group: group_id,

@@ -44,7 +44,7 @@ export const useChatStore = defineStore('chat', () => {
     messages.value = data.messages.reverse()
   }
 
-  const sendMessage = (content, type = 'text', mediaUrl = null) => {
+  const sendMessage = (content, type = 'text', mediaUrl = null, replyTo = null) => {
     if (!authStore.socket) return
 
     if (selectedGroup.value) {
@@ -53,13 +53,15 @@ export const useChatStore = defineStore('chat', () => {
         group_id: selectedGroup.value._id,
         content,
         type,
-        mediaUrl
+        mediaUrl,
+        replyTo
       })
       authStore.socket.emit('send-group-message', {
         group_id: selectedGroup.value._id,
         content,
         type,
-        mediaUrl
+        mediaUrl,
+        ...(replyTo && { replyTo })
       })
     } else if (selectedUser.value) {
       // Envoyer un message direct
@@ -67,7 +69,8 @@ export const useChatStore = defineStore('chat', () => {
         recipient_id: selectedUser.value.id,
         content,
         type,
-        mediaUrl
+        mediaUrl,
+        ...(replyTo && { replyTo })
       })
     }
   }

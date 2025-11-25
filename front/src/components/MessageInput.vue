@@ -6,6 +6,12 @@ import { useChatStore } from '../stores/chat'
 import { useAuthStore } from '../stores/auth'
 import { Smile, Plus, Mic, Send, Image, FileText, X } from 'lucide-vue-next'
 
+const props = defineProps<{
+  replyTo?: any
+}>()
+
+const emit = defineEmits(['message-sent'])
+
 const chatStore = useChatStore()
 const authStore = useAuthStore()
 const message = ref('')
@@ -42,8 +48,9 @@ const sendMessage = async () => {
   if (selectedFile.value) {
     await sendMediaMessage()
   } else {
-    chatStore.sendMessage(message.value)
+    chatStore.sendMessage(message.value, 'text', null, props.replyTo?._id)
     message.value = ''
+    emit('message-sent')
   }
 
   if (typingTimeout.value) {

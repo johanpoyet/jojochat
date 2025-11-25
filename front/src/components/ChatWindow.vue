@@ -174,12 +174,11 @@ const blockContact = () => {
         })
 
         if (response.ok) {
-          // Clear the chat immediately
           chatStore.selectedUser = null
           chatStore.selectedGroup = null
           chatStore.messages = []
+          await chatStore.getConversations()
 
-          // Show success message after clearing
           showAlert('Success', `${username} has been blocked`)
         } else {
           const data = await response.json()

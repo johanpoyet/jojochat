@@ -1,11 +1,13 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useAuthStore } from '../stores/auth'
+import { useChatStore } from '../stores/chat'
 import { ArrowLeft, UserX, Shield, Unlock } from 'lucide-vue-next'
 
 const emit = defineEmits(['close'])
 
 const authStore = useAuthStore()
+const chatStore = useChatStore()
 
 const blockedContacts = ref([])
 const loading = ref(true)
@@ -46,6 +48,7 @@ const unblockContact = async (userId) => {
 
     if (response.ok) {
       blockedContacts.value = blockedContacts.value.filter(contact => contact._id !== userId)
+      await chatStore.getConversations()
     } else {
       const data = await response.json()
       error.value = data.error || 'Failed to unblock contact'

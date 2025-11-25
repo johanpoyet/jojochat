@@ -1,10 +1,12 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { useContactsStore } from '../stores/contacts'
+import { useChatStore } from '../stores/chat'
 import { ArrowLeft, Search, UserPlus, MoreVertical, Ban, Trash2, Edit2, X } from 'lucide-vue-next'
 
 const emit = defineEmits(['close', 'start-chat'])
 const contactsStore = useContactsStore()
+const chatStore = useChatStore()
 
 const searchQuery = ref('')
 const searchResults = ref([])
@@ -80,11 +82,13 @@ const saveNickname = async () => {
 
 const handleBlock = async (contact) => {
   await contactsStore.blockContact(contact._id)
+  await chatStore.getConversations()
   closeContextMenu()
 }
 
 const handleUnblock = async (contact) => {
   await contactsStore.unblockContact(contact._id)
+  await chatStore.getConversations()
 }
 
 const handleDelete = async (contact) => {

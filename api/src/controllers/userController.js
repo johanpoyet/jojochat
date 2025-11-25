@@ -208,7 +208,6 @@ const deactivateSession = async (req, res) => {
   }
 };
 
-// Upload avatar
 const uploadAvatar = async (req, res) => {
   try {
     const userId = req.user._id;
@@ -237,6 +236,71 @@ const uploadAvatar = async (req, res) => {
     });
   } catch (error) {
     console.error('Upload avatar error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
+const deleteAvatar = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    if (user.avatar) {
+      const avatarPath = path.join(__dirname, '../../uploads', user.avatar);
+      if (fs.existsSync(avatarPath)) {
+        fs.unlinkSync(avatarPath);
+      }
+      user.avatar = null;
+      await user.save();
+    }
+
+    res.json({ message: 'Avatar deleted successfully' });
+  } catch (error) {
+    console.error('Delete avatar error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
+const deleteAccount = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const { password } = req.body;
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const isPasswordValid = await user.comparePassword(password);
+    if (!isPasswordValid) {
+      return res.status(401).json({ error: 'Invalid password' });
+    }
+
+    if (user.avatar) {
+      const avatarPath = path.join(__dirname, '../../uploads', user.avatar);
+      if (fs.existsSync(avatarPath)) {
+        fs.unlinkSync(avatarPath);
+      }
+    }
+
+    await Session.deleteMany({ user: userId });
+    await Contact.deleteMany({ $or: [{ user: userId }, { contact: userId }] });
+    await Message.deleteMany({ $or: [{ sender: userId }, { recipient: userId }] });
+    await Conversation.deleteMany({ participants: userId });
+
+    await User.findByIdAndDelete(userId);
+
+    res.json({ message: 'Account deleted successfully' });
+  } catch (error) {
+    console.error('Delete account error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
 const blockUser = async (req, res) => {
   try {
     const userId = req.user._id;
@@ -270,39 +334,6 @@ const blockUser = async (req, res) => {
   }
 };
 
-// Delete avatar
-const deleteAvatar = async (req, res) => {
-  try {
-    const userId = req.user._id;
-    const user = await User.findById(userId);
-
-    if (!user) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-
-    if (user.avatar) {
-      const avatarPath = path.join(__dirname, '../../uploads', user.avatar);
-      if (fs.existsSync(avatarPath)) {
-        fs.unlinkSync(avatarPath);
-      }
-      user.avatar = null;
-      await user.save();
-    }
-
-    res.json({ message: 'Avatar deleted successfully' });
-  } catch (error) {
-    console.error('Delete avatar error:', error);
-    res.status(500).json({ error: 'Server error' });
-  }
-};
-
-// Delete user account
-const deleteAccount = async (req, res) => {
-  try {
-    const userId = req.user._id;
-    const { password } = req.body;
-
-    // Verify password
 const unblockUser = async (req, res) => {
   try {
     const userId = req.user._id;
@@ -313,31 +344,6 @@ const unblockUser = async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    const isPasswordValid = await user.comparePassword(password);
-    if (!isPasswordValid) {
-      return res.status(401).json({ error: 'Invalid password' });
-    }
-
-    // Delete avatar if exists
-    if (user.avatar) {
-      const avatarPath = path.join(__dirname, '../../uploads', user.avatar);
-      if (fs.existsSync(avatarPath)) {
-        fs.unlinkSync(avatarPath);
-      }
-    }
-
-    // Delete all user data
-    await Session.deleteMany({ user: userId });
-    await Contact.deleteMany({ $or: [{ user: userId }, { contact: userId }] });
-    await Message.deleteMany({ $or: [{ sender: userId }, { recipient: userId }] });
-    await Conversation.deleteMany({ participants: userId });
-
-    // Delete user
-    await User.findByIdAndDelete(userId);
-
-    res.json({ message: 'Account deleted successfully' });
-  } catch (error) {
-    console.error('Delete account error:', error);
     if (!user.blockedUsers.includes(blockedUserId)) {
       return res.status(400).json({ error: 'User is not blocked' });
     }

@@ -132,12 +132,10 @@ const cancelEditing = () => {
 }
 
 .status-header {
-  height: 108px;
   background: var(--accent-dark);
-  padding: 0 20px;
+  padding: 16px 20px;
   display: flex;
-  align-items: flex-end;
-  padding-bottom: 10px;
+  align-items: center;
   gap: 20px;
 }
 
@@ -146,7 +144,6 @@ const cancelEditing = () => {
   margin: 0;
   font-size: 19px;
   font-weight: 500;
-  margin-bottom: 5px;
 }
 
 .btn-close {
@@ -154,7 +151,6 @@ const cancelEditing = () => {
   border: none;
   cursor: pointer;
   padding: 0;
-  margin-bottom: 5px;
 }
 
 .status-content {

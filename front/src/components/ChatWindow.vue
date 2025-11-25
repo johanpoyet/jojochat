@@ -2,14 +2,12 @@
 import { ref, nextTick, watch } from 'vue'
 import { useChatStore } from '../stores/chat'
 import { useAuthStore } from '../stores/auth'
-import { useGroupsStore } from '../stores/groups'
 import { Search, MoreVertical, Check, CheckCheck, Smile, Edit2, Trash2, X, Ban } from 'lucide-vue-next'
 import MessageInput from './MessageInput.vue'
 import TypingIndicator from './TypingIndicator.vue'
 
 const chatStore = useChatStore()
 const authStore = useAuthStore()
-const groupsStore = useGroupsStore()
 const messagesContainer = ref(null)
 const showReactionPicker = ref(null)
 const editingMessage = ref(null)
@@ -22,9 +20,6 @@ const showSearch = ref(false)
 const searchQuery = ref('')
 const searchResults = ref([])
 const searchLoading = ref(false)
-const searchInAllConversations = ref(false)
-const replyingTo = ref(null)
-const hoveredMessage = ref(null)
 
 const commonEmojis = ['👍', '❤️', '😂', '😮', '😢', '🙏']
 
@@ -203,7 +198,6 @@ const toggleSearch = () => {
   if (!showSearch.value) {
     searchQuery.value = ''
     searchResults.value = []
-    searchInAllConversations.value = false
   }
 }
 
@@ -216,23 +210,20 @@ const performSearch = async () => {
   searchLoading.value = true
 
   try {
-    const params = new URLSearchParams({
-      query: searchQuery.value
-    })
+    const conversationId = chatStore.selectedGroup
+      ? `group-${chatStore.selectedGroup._id}`
+      : chatStore.selectedUser?.id || chatStore.selectedUser?._id
 
-    if (!searchInAllConversations.value) {
-      const conversationId = chatStore.selectedGroup
-        ? `group-${chatStore.selectedGroup._id}`
-        : chatStore.selectedUser?.id || chatStore.selectedUser?._id
-
-      if (!conversationId) {
-        console.error('No conversation selected')
-        searchLoading.value = false
-        return
-      }
-
-      params.append('conversationId', conversationId)
+    if (!conversationId) {
+      console.error('No conversation selected')
+      searchLoading.value = false
+      return
     }
+
+    const params = new URLSearchParams({
+      query: searchQuery.value,
+      conversationId
+    })
 
     const response = await fetch(`${authStore.API_URL}/api/messages/search?${params}`, {
       headers: { 'Authorization': `Bearer ${authStore.token}` }
@@ -254,49 +245,21 @@ const performSearch = async () => {
   }
 }
 
-const scrollToMessage = async (result) => {
-  const messageId = result._id
-
-  if (result.group) {
-    const groupId = typeof result.group === 'string' ? result.group : (result.group._id || result.group)
-    const group = groupsStore.groups.find(g => g._id === groupId)
-    if (group) {
-      await chatStore.selectGroup(group)
-    }
-  } else if (result.sender) {
-    const senderId = typeof result.sender === 'string' ? result.sender : result.sender._id
-    const recipientId = result.recipient && (typeof result.recipient === 'string' ? result.recipient : result.recipient._id)
-    
-    if (senderId === authStore.user.id && recipientId) {
-      const otherUser = { id: recipientId }
-      if (result.recipient && typeof result.recipient === 'object') {
-        otherUser.username = result.recipient.username
-      }
-      await chatStore.selectUser(otherUser)
-    } else if (senderId !== authStore.user.id) {
-      const otherUser = { id: senderId }
-      if (typeof result.sender === 'object') {
-        otherUser.username = result.sender.username
-      }
-      await chatStore.selectUser(otherUser)
-    }
-  }
-
+const scrollToMessage = (messageId) => {
   showSearch.value = false
   searchQuery.value = ''
   searchResults.value = []
 
-  await nextTick()
-  await new Promise(resolve => setTimeout(resolve, 100))
-  
-  const messageElement = document.getElementById(`message-${messageId}`)
-  if (messageElement) {
-    messageElement.scrollIntoView({ behavior: 'smooth', block: 'center' })
-    messageElement.classList.add('highlight')
-    setTimeout(() => {
-      messageElement.classList.remove('highlight')
-    }, 2000)
-  }
+  nextTick(() => {
+    const messageElement = document.getElementById(`message-${messageId}`)
+    if (messageElement) {
+      messageElement.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      messageElement.classList.add('highlight')
+      setTimeout(() => {
+        messageElement.classList.remove('highlight')
+      }, 2000)
+    }
+  })
 }
 
 const setReplyTo = (message) => {
@@ -387,13 +350,9 @@ const getMediaUrl = (url) => {
             v-model="searchQuery"
             @input="performSearch"
             type="text"
-            :placeholder="searchInAllConversations ? 'Search in all conversations...' : 'Search in conversation...'"
+            placeholder="Search in conversation..."
             class="search-input"
           />
-          <label class="search-toggle">
-            <input type="checkbox" v-model="searchInAllConversations" @change="performSearch" />
-            <span>All conversations</span>
-          </label>
         </div>
         <div class="search-results">
           <div v-if="searchLoading" class="search-loading">Searching...</div>
@@ -404,16 +363,10 @@ const getMediaUrl = (url) => {
             <div
               v-for="result in searchResults"
               :key="result._id"
-              @click="scrollToMessage(result)"
+              @click="scrollToMessage(result._id)"
               class="search-result-item"
             >
-              <div class="result-header">
-                <div class="result-sender">{{ result.sender.username }}</div>
-                <div class="result-context" v-if="searchInAllConversations">
-                  <span v-if="result.group">{{ typeof result.group === 'string' ? '' : result.group.name }}</span>
-                  <span v-else-if="result.recipient && result.sender._id === authStore.user.id">{{ result.recipient.username || '' }}</span>
-                </div>
-              </div>
+              <div class="result-sender">{{ result.sender.username }}</div>
               <div class="result-content">{{ result.content }}</div>
               <div class="result-date">{{ formatTime(result.createdAt) }}</div>
             </div>
@@ -1288,40 +1241,6 @@ const getMediaUrl = (url) => {
   color: var(--text-secondary);
 }
 
-.search-toggle {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 10px;
-  font-size: 13px;
-  color: var(--text-secondary);
-  cursor: pointer;
-  user-select: none;
-}
-
-.search-toggle input[type="checkbox"] {
-  cursor: pointer;
-  width: 16px;
-  height: 16px;
-}
-
-.search-toggle span {
-  color: var(--text-secondary);
-}
-
-.search-result-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 4px;
-}
-
-.result-context {
-  font-size: 12px;
-  color: var(--text-secondary);
-  font-weight: normal;
-}
-
 .search-results-list {
   flex: 1;
   overflow-y: auto;
@@ -1342,23 +1261,11 @@ const getMediaUrl = (url) => {
   border-color: var(--border-color);
 }
 
-.result-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 4px;
-}
-
 .result-sender {
   font-weight: 600;
   font-size: 14px;
   color: var(--text-primary);
-}
-
-.result-context {
-  font-size: 12px;
-  color: var(--text-secondary);
-  font-weight: normal;
+  margin-bottom: 4px;
 }
 
 .result-content {

@@ -249,7 +249,7 @@ const startChat = (contact) => {
 .contacts-header {
   background: #008069;
   color: white;
-  padding: 60px 20px 20px;
+  padding: 16px 20px;
   display: flex;
   align-items: center;
   gap: 20px;

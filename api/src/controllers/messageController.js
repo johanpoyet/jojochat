@@ -25,6 +25,17 @@ const createMessage = async (req, res) => {
       return res.status(400).json({ error: 'Cannot send message to yourself' });
     }
 
+    // Check if sender is blocked by recipient
+    if (recipient.blockedUsers && recipient.blockedUsers.includes(senderId)) {
+      return res.status(403).json({ error: 'Cannot send message to this user' });
+    }
+
+    // Check if recipient is blocked by sender
+    const sender = await User.findById(senderId);
+    if (sender.blockedUsers && sender.blockedUsers.includes(recipient_id)) {
+      return res.status(403).json({ error: 'Cannot send message to this user' });
+    }
+
     const message = await Message.create({
       sender: senderId,
       recipient: recipient_id,

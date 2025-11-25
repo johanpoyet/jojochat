@@ -2,7 +2,7 @@
 import { ref, nextTick, watch } from 'vue'
 import { useChatStore } from '../stores/chat'
 import { useAuthStore } from '../stores/auth'
-import { Search, MoreVertical, Check, CheckCheck, Smile, Edit2, Trash2, X } from 'lucide-vue-next'
+import { Search, MoreVertical, Check, CheckCheck, Smile, Edit2, Trash2, X, Ban } from 'lucide-vue-next'
 import MessageInput from './MessageInput.vue'
 import TypingIndicator from './TypingIndicator.vue'
 
@@ -13,8 +13,34 @@ const showReactionPicker = ref(null)
 const editingMessage = ref(null)
 const editContent = ref('')
 const contextMenu = ref({ show: false, message: null, x: 0, y: 0 })
+const showHeaderMenu = ref(false)
+const confirmModal = ref({ show: false, title: '', message: '', onConfirm: null })
+const alertModal = ref({ show: false, title: '', message: '' })
 
 const commonEmojis = ['👍', '❤️', '😂', '😮', '😢', '🙏']
+
+const showConfirm = (title, message, onConfirm) => {
+  confirmModal.value = { show: true, title, message, onConfirm }
+}
+
+const closeConfirm = () => {
+  confirmModal.value = { show: false, title: '', message: '', onConfirm: null }
+}
+
+const handleConfirm = () => {
+  if (confirmModal.value.onConfirm) {
+    confirmModal.value.onConfirm()
+  }
+  closeConfirm()
+}
+
+const showAlert = (title, message) => {
+  alertModal.value = { show: true, title, message }
+}
+
+const closeAlert = () => {
+  alertModal.value = { show: false, title: '', message: '' }
+}
 
 const scrollToBottom = () => {
   nextTick(() => {
@@ -117,6 +143,52 @@ const deleteMessage = (message) => {
   closeContextMenu()
 }
 
+const toggleHeaderMenu = () => {
+  showHeaderMenu.value = !showHeaderMenu.value
+}
+
+const closeHeaderMenu = () => {
+  showHeaderMenu.value = false
+}
+
+const blockContact = () => {
+  if (!chatStore.selectedUser) return
+
+  closeHeaderMenu()
+
+  const userId = chatStore.selectedUser.id || chatStore.selectedUser._id
+  const username = chatStore.selectedUser.username
+
+  showConfirm(
+    'Block Contact',
+    `Are you sure you want to block ${username}? You won't receive messages from them.`,
+    async () => {
+      try {
+        const response = await fetch(`${authStore.API_URL}/api/users/block/${userId}`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${authStore.token}` }
+        })
+
+        if (response.ok) {
+          // Clear the chat immediately
+          chatStore.selectedUser = null
+          chatStore.selectedGroup = null
+          chatStore.messages = []
+
+          // Show success message after clearing
+          showAlert('Success', `${username} has been blocked`)
+        } else {
+          const data = await response.json()
+          showAlert('Error', data.error || 'Failed to block contact')
+        }
+      } catch (err) {
+        console.error('Block error:', err)
+        showAlert('Error', 'Network error. Please try again.')
+      }
+    }
+  )
+}
+
 const isImage = (message) => message.type === 'image' && message.mediaUrl
 const isVideo = (message) => message.type === 'video' && message.mediaUrl
 const isDocument = (message) => message.type === 'document' && message.mediaUrl
@@ -168,13 +240,21 @@ const getMediaUrl = (url) => {
           <button class="icon-btn" title="Search">
             <Search :size="24" />
           </button>
-          <button class="icon-btn" title="Menu">
-            <MoreVertical :size="24" />
-          </button>
+          <div class="menu-wrapper">
+            <button class="icon-btn" title="Menu" @click="toggleHeaderMenu">
+              <MoreVertical :size="24" />
+            </button>
+            <div v-if="showHeaderMenu" class="header-dropdown-menu">
+              <button v-if="chatStore.selectedUser" @click="blockContact" class="menu-item danger">
+                <Ban :size="18" />
+                <span>Block Contact</span>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div ref="messagesContainer" class="messages-container" @click="closeContextMenu">
+      <div ref="messagesContainer" class="messages-container" @click="closeContextMenu(); closeHeaderMenu()">
         <div
           v-for="message in chatStore.messages"
           :key="message._id"
@@ -257,6 +337,43 @@ const getMediaUrl = (url) => {
 
       <MessageInput />
     </template>
+
+    <!-- Confirm Modal -->
+    <div v-if="confirmModal.show" class="modal-overlay" @click="closeConfirm">
+      <div class="custom-modal" @click.stop>
+        <div class="modal-header">
+          <h3>{{ confirmModal.title }}</h3>
+          <button @click="closeConfirm" class="modal-close">
+            <X :size="20" />
+          </button>
+        </div>
+        <div class="modal-body-text">
+          {{ confirmModal.message }}
+        </div>
+        <div class="modal-footer-buttons">
+          <button @click="closeConfirm" class="modal-btn modal-btn-cancel">Cancel</button>
+          <button @click="handleConfirm" class="modal-btn modal-btn-confirm">Confirm</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Alert Modal -->
+    <div v-if="alertModal.show" class="modal-overlay" @click="closeAlert">
+      <div class="custom-modal" @click.stop>
+        <div class="modal-header">
+          <h3>{{ alertModal.title }}</h3>
+          <button @click="closeAlert" class="modal-close">
+            <X :size="20" />
+          </button>
+        </div>
+        <div class="modal-body-text">
+          {{ alertModal.message }}
+        </div>
+        <div class="modal-footer-buttons">
+          <button @click="closeAlert" class="modal-btn modal-btn-primary">OK</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -366,6 +483,49 @@ const getMediaUrl = (url) => {
   display: flex;
   gap: 10px;
   align-items: center;
+}
+
+.menu-wrapper {
+  position: relative;
+}
+
+.header-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: var(--bg-secondary);
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  min-width: 200px;
+  z-index: 1000;
+  overflow: hidden;
+}
+
+.header-dropdown-menu .menu-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  font-size: 15px;
+  cursor: pointer;
+  transition: background 0.2s;
+  text-align: left;
+}
+
+.header-dropdown-menu .menu-item:hover {
+  background: var(--hover-color);
+}
+
+.header-dropdown-menu .menu-item.danger {
+  color: var(--danger-color);
+}
+
+.header-dropdown-menu .menu-item.danger:hover {
+  background: rgba(239, 83, 80, 0.1);
 }
 
 .icon-btn {
@@ -695,5 +855,136 @@ const getMediaUrl = (url) => {
 
 .context-menu button.danger {
   color: #dc2626;
+}
+
+/* Custom Modals */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.custom-modal {
+  background: var(--bg-secondary);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  width: 90%;
+  max-width: 400px;
+  overflow: hidden;
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s;
+}
+
+.modal-close:hover {
+  background: var(--hover-color);
+  color: var(--text-primary);
+}
+
+.modal-body-text {
+  padding: 24px;
+  color: var(--text-primary);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.modal-footer-buttons {
+  display: flex;
+  gap: 12px;
+  padding: 16px 24px;
+  justify-content: flex-end;
+  border-top: 1px solid var(--border-color);
+}
+
+.modal-btn {
+  padding: 10px 24px;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+  outline: none;
+}
+
+.modal-btn-cancel {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.modal-btn-cancel:hover {
+  background: var(--hover-color);
+}
+
+.modal-btn-confirm {
+  background: var(--danger-color);
+  color: white;
+}
+
+.modal-btn-confirm:hover {
+  background: #c53030;
+}
+
+.modal-btn-primary {
+  background: var(--accent-color);
+  color: white;
+}
+
+.modal-btn-primary:hover {
+  background: var(--accent-dark);
 }
 </style>

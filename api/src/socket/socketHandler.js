@@ -75,6 +75,17 @@ const socketHandler = (io) => {
           return socket.emit('error', { message: 'Recipient not found' });
         }
 
+        // Check if sender is blocked by recipient
+        if (recipient.blockedUsers && recipient.blockedUsers.includes(socket.userId)) {
+          return socket.emit('error', { message: 'Cannot send message to this user' });
+        }
+
+        // Check if recipient is blocked by sender
+        const sender = await User.findById(socket.userId);
+        if (sender.blockedUsers && sender.blockedUsers.some(id => id.toString() === recipient_id)) {
+          return socket.emit('error', { message: 'Cannot send message to this user' });
+        }
+
         const message = await retryOperation(async () => {
           return await Message.create({
             sender: socket.userId,

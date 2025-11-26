@@ -245,7 +245,6 @@ const handleCloseBlockedContacts = () => {
 
 @media (min-width: 1441px) {
   .chat-container {
-    padding: 19px;
     box-sizing: border-box;
   }
 

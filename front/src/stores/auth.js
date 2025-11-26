@@ -8,7 +8,7 @@ export const useAuthStore = defineStore('auth', () => {
   const socket = ref(null)
   const isAuthenticated = ref(!!token.value && !!user.value)
 
-  const API_URL = 'http://localhost:3000'
+  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
 
   const register = async (email, username, password) => {
     const response = await fetch(`${API_URL}/api/auth/register`, {

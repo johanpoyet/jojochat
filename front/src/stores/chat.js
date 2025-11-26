@@ -11,6 +11,7 @@ export const useChatStore = defineStore('chat', () => {
   const messages = ref([])
   const users = ref([])
   const typingUsers = ref([])
+  const loading = ref(false)
 
   const getUsers = async () => {
     const response = await fetch(`${authStore.API_URL}/api/users`, {
@@ -96,22 +97,30 @@ export const useChatStore = defineStore('chat', () => {
   }
 
   const selectUser = async (user) => {
+    loading.value = true
     selectedUser.value = user
     selectedGroup.value = null
-    await getMessages(user.id)
+    try {
+      await getMessages(user.id)
+    } finally {
+      loading.value = false
+    }
   }
 
   const selectGroup = async (group) => {
+    loading.value = true
     selectedGroup.value = group
     selectedUser.value = null
     messages.value = []
 
-    // Charger les messages du groupe depuis l'API
-    await getGroupMessages(group._id)
+    try {
+      await getGroupMessages(group._id)
 
-    // Rejoindre le room du groupe
-    if (authStore.socket) {
-      authStore.socket.emit('join-group-room', { group_id: group._id })
+      if (authStore.socket) {
+        authStore.socket.emit('join-group-room', { group_id: group._id })
+      }
+    } finally {
+      loading.value = false
     }
   }
 
@@ -180,11 +189,25 @@ export const useChatStore = defineStore('chat', () => {
     authStore.socket.on('user-online', ({ userId }) => {
       const user = users.value.find(u => u.id === userId)
       if (user) user.status = 'online'
+
+      const conv = conversations.value.find(c => c.otherUser.id === userId)
+      if (conv) conv.otherUser.status = 'online'
+
+      if (selectedUser.value && selectedUser.value.id === userId) {
+        selectedUser.value.status = 'online'
+      }
     })
 
     authStore.socket.on('user-offline', ({ userId }) => {
       const user = users.value.find(u => u.id === userId)
       if (user) user.status = 'offline'
+
+      const conv = conversations.value.find(c => c.otherUser.id === userId)
+      if (conv) conv.otherUser.status = 'offline'
+
+      if (selectedUser.value && selectedUser.value.id === userId) {
+        selectedUser.value.status = 'offline'
+      }
     })
 
     authStore.socket.on('reaction-added', (data) => {
@@ -243,6 +266,7 @@ export const useChatStore = defineStore('chat', () => {
     messages,
     users,
     typingUsers,
+    loading,
     isTyping,
     getUsers,
     getConversations,

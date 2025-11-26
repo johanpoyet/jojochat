@@ -382,8 +382,15 @@ const getMediaUrl = (url) => {
       </div>
 
       <div ref="messagesContainer" class="messages-container" @click="closeContextMenu(); closeHeaderMenu()">
-        <div
-          v-for="message in chatStore.messages"
+        <transition name="fade">
+          <div v-if="chatStore.loading" class="loading-messages">
+            <div class="spinner"></div>
+            <p>Loading messages...</p>
+          </div>
+        </transition>
+        <transition-group name="message-list" tag="div">
+          <div
+            v-for="message in chatStore.messages"
           :key="message._id"
           :id="`message-${message._id}`"
           class="message"
@@ -462,6 +469,7 @@ const getMediaUrl = (url) => {
             </div>
           </div>
         </div>
+        </transition-group>
         <TypingIndicator v-if="chatStore.isTyping" />
       </div>
 
@@ -722,6 +730,59 @@ const getMediaUrl = (url) => {
   background-color: #efeae2;
   background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png');
   position: relative;
+}
+
+.loading-messages {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  gap: 16px;
+}
+
+.loading-messages p {
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid var(--border-color);
+  border-top-color: var(--accent-color);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.fade-enter-active, .fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+
+.fade-enter-from, .fade-leave-to {
+  opacity: 0;
+}
+
+.message-list-enter-active {
+  transition: all 0.3s ease;
+}
+
+.message-list-leave-active {
+  transition: all 0.2s ease;
+  position: absolute;
+}
+
+.message-list-enter-from {
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+.message-list-leave-to {
+  opacity: 0;
 }
 
 :root.dark-mode .messages-container {

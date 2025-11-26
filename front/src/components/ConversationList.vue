@@ -215,9 +215,11 @@ const isUserTyping = (userId) => {
         :class="{ active: chatStore.selectedUser?.id === conv.otherUser.id }"
         @click="selectUser(conv.otherUser)"
       >
-        <div class="avatar">
-          <img v-if="conv.otherUser.avatar" :src="conv.otherUser.avatar" alt="avatar" />
-          <User v-else :size="20" />
+        <div class="avatar-wrapper">
+          <div class="avatar">
+            <img v-if="conv.otherUser.avatar" :src="conv.otherUser.avatar" alt="avatar" />
+            <User v-else :size="20" />
+          </div>
           <span
             class="status-indicator"
             :class="{ online: conv.otherUser.status === 'online' }"
@@ -316,9 +318,11 @@ const isUserTyping = (userId) => {
                 </div>
               </div>
 
-              <div class="avatar">
-                <img v-if="user.avatar" :src="user.avatar" alt="avatar" />
-                <User v-else :size="20" />
+              <div class="avatar-wrapper">
+                <div class="avatar">
+                  <img v-if="user.avatar" :src="user.avatar" alt="avatar" />
+                  <User v-else :size="20" />
+                </div>
                 <span
                   class="status-indicator"
                   :class="{ online: user.status === 'online' }"
@@ -381,10 +385,16 @@ const isUserTyping = (userId) => {
   cursor: pointer;
 }
 
-.avatar {
+.avatar-wrapper {
   position: relative;
   width: 40px;
   height: 40px;
+  flex-shrink: 0;
+}
+
+.avatar {
+  width: 100%;
+  height: 100%;
   border-radius: 50%;
   background: #dfe5e7;
   display: flex;
@@ -518,10 +528,9 @@ const isUserTyping = (userId) => {
   background: var(--bg-primary);
 }
 
-.conversation-item .avatar {
+.conversation-item .avatar-wrapper {
   width: 49px;
   height: 49px;
-  flex-shrink: 0;
 }
 
 .conv-info {
@@ -837,6 +846,7 @@ const isUserTyping = (userId) => {
   border-radius: 50%;
   background: #8696a0;
   border: 2px solid white;
+  z-index: 1;
 }
 
 .status-indicator.online {

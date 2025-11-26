@@ -16,18 +16,14 @@ FROM node:18-alpine AS runtime
 ENV NODE_ENV=production
 WORKDIR /app
 
-RUN addgroup -S app && adduser -S app -G app
-
 COPY --from=api-deps /app/api/node_modules ./api/node_modules
 COPY api/ ./api/
 
 COPY --from=front-builder /app/front/dist ./api/public
 
-RUN mkdir -p ./api/uploads/avatars ./api/uploads/media && \
-    chown -R app:app ./api/uploads
+RUN mkdir -p ./api/uploads/avatars ./api/uploads/media
 
 EXPOSE 3000
-USER app
 WORKDIR /app/api
 CMD ["node", "src/index.js"]
 

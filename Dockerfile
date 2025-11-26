@@ -3,6 +3,8 @@ WORKDIR /app/front
 COPY front/package*.json ./
 RUN npm ci
 COPY front/ .
+ARG VITE_API_URL
+ENV VITE_API_URL=$VITE_API_URL
 RUN npm run build
 
 FROM node:18-alpine AS api-deps

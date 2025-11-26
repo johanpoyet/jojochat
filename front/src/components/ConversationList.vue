@@ -392,15 +392,21 @@ const isUserTyping = (userId) => {
   flex-shrink: 0;
 }
 
-.avatar {
+.avatar-wrapper .avatar {
   width: 100%;
   height: 100%;
+}
+
+.avatar {
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   background: #dfe5e7;
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
+  flex-shrink: 0;
 }
 
 .avatar img {

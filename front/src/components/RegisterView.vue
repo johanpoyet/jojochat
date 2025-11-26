@@ -66,8 +66,18 @@ const handleRegister = async () => {
 </script>
 
 <template>
-  <div class="register-container">
-    <div class="register-box">
+  <div class="app-backdrop">
+    <div class="app-window">
+      <div class="window-header" aria-hidden="true">
+        <div class="window-controls">
+          <span class="window-dot dot-close"></span>
+          <span class="window-dot dot-minimize"></span>
+          <span class="window-dot dot-fullscreen"></span>
+        </div>
+      </div>
+
+      <div class="register-container">
+        <div class="register-box">
       <div class="register-header">
         <h1>WhatsApp</h1>
         <p>Create your account</p>
@@ -122,12 +132,77 @@ const handleRegister = async () => {
         <button @click="emit('switch-to-login')" class="btn-link">Sign in</button>
       </div>
     </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <style scoped>
+.app-backdrop {
+  width: 100vw;
+  height: 100vh;
+  background: radial-gradient(circle at top, #f5f7fb 0%, #d7dde4 45%, #bac4cf 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(12px, 3vw, 36px);
+}
+
+.app-window {
+  width: min(92vw, 700px);
+  height: min(92vh, 700px);
+  background: #ffffff;
+  border-radius: 22px;
+  box-shadow:
+    0 45px 95px rgba(15, 23, 42, 0.25),
+    0 25px 45px rgba(15, 23, 42, 0.12);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  position: relative;
+}
+
+.window-header {
+  height: 42px;
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  background: linear-gradient(135deg, #fdfdfd, #f3f6f8);
+  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.window-controls {
+  display: flex;
+  gap: 8px;
+}
+
+.window-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  display: inline-flex;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: inset 0 0 2px rgba(0, 0, 0, 0.25);
+}
+
+.dot-close {
+  background: #ff5f57;
+  border-color: #e0483f;
+}
+
+.dot-minimize {
+  background: #febc2e;
+  border-color: #e0a323;
+}
+
+.dot-fullscreen {
+  background: #28c940;
+  border-color: #1e9f31;
+}
+
 .register-container {
-  min-height: 100vh;
+  flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;

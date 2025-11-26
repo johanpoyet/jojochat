@@ -70,4 +70,38 @@ const getConversations = async (req, res) => {
   }
 };
 
-module.exports = { getConversations };
+const deleteConversation = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const { conversationId } = req.params;
+
+    // Find the conversation
+    const conversation = await Conversation.findById(conversationId);
+
+    if (!conversation) {
+      return res.status(404).json({ error: 'Conversation not found' });
+    }
+
+    // Check if user is a participant
+    const isParticipant = conversation.participants.some(
+      p => p.toString() === userId.toString()
+    );
+
+    if (!isParticipant) {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
+
+    // Delete all messages in the conversation
+    await Message.deleteMany({ conversation: conversationId });
+
+    // Delete the conversation
+    await Conversation.findByIdAndDelete(conversationId);
+
+    res.json({ message: 'Conversation deleted successfully' });
+  } catch (error) {
+    console.error('Delete conversation error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
+module.exports = { getConversations, deleteConversation };

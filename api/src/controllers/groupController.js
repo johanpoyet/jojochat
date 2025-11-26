@@ -287,6 +287,69 @@ const leaveGroup = async (req, res) => {
   }
 };
 
+const getGroupMembers = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user._id;
+
+    const group = await Group.findById(id)
+      .populate('creator', 'username avatar email')
+      .populate('members.user', 'username avatar email status statusMessage')
+      .populate('members.addedBy', 'username');
+
+    if (!group) {
+      return res.status(404).json({ error: 'Group not found' });
+    }
+
+    console.log('=== getGroupMembers Debug ===');
+    console.log('Requested group ID:', id);
+    console.log('Current user ID:', userId.toString());
+    console.log('Group name:', group.name);
+    console.log('Group members count:', group.members.length);
+    console.log('Group members:', group.members.map(m => ({
+      id: m.user._id.toString(),
+      username: m.user.username,
+      role: m.role
+    })));
+
+    // Check if user is a member (after populate, we need to use m.user._id)
+    const isMember = group.members.some(m => m.user._id.toString() === userId.toString());
+    console.log('Is user a member?', isMember);
+
+    if (!isMember) {
+      console.log('ERROR: User is not a member');
+      return res.status(403).json({
+        error: 'Not a member of this group',
+        debug: {
+          userId: userId.toString(),
+          groupMembers: group.members.map(m => m.user._id.toString())
+        }
+      });
+    }
+
+    // Format members data with role information
+    const formattedMembers = group.members.map(member => ({
+      _id: member.user._id,
+      username: member.user.username,
+      avatar: member.user.avatar,
+      email: member.user.email,
+      status: member.user.status,
+      statusMessage: member.user.statusMessage,
+      role: member.role,
+      addedBy: member.addedBy?.username || 'Unknown',
+      joinedAt: member.joinedAt
+    }));
+
+    res.json({
+      members: formattedMembers,
+      createdBy: group.creator._id
+    });
+  } catch (error) {
+    console.error('Get group members error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
 module.exports = {
   createGroup,
   getGroups,
@@ -296,5 +359,6 @@ module.exports = {
   addMembers,
   removeMember,
   updateMemberRole,
-  leaveGroup
+  leaveGroup,
+  getGroupMembers
 };

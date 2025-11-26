@@ -97,9 +97,11 @@ export const useChatStore = defineStore('chat', () => {
   }
 
   const selectUser = async (user) => {
-    loading.value = true
     selectedUser.value = user
     selectedGroup.value = null
+    messages.value = []
+    loading.value = true
+
     try {
       await getMessages(user.id)
     } finally {
@@ -108,10 +110,10 @@ export const useChatStore = defineStore('chat', () => {
   }
 
   const selectGroup = async (group) => {
-    loading.value = true
     selectedGroup.value = group
     selectedUser.value = null
     messages.value = []
+    loading.value = true
 
     try {
       await getGroupMessages(group._id)

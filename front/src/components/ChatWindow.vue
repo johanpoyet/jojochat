@@ -388,7 +388,7 @@ const getMediaUrl = (url) => {
             <p>Loading messages...</p>
           </div>
         </transition>
-        <transition-group name="message-list" tag="div">
+        <transition-group name="message-list" tag="div" class="messages-list">
           <div
             v-for="message in chatStore.messages"
           :key="message._id"
@@ -783,6 +783,13 @@ const getMediaUrl = (url) => {
 
 .message-list-leave-to {
   opacity: 0;
+}
+
+.messages-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
 }
 
 :root.dark-mode .messages-container {

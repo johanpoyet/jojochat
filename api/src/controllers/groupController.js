@@ -37,6 +37,13 @@ const createGroup = async (req, res) => {
       .populate('creator', 'username avatar')
       .populate('members.user', 'username avatar status');
 
+    // Emit socket event to all group members
+    const io = req.app.get('io');
+    if (io) {
+      // Broadcast to all connected clients - they will filter by membership on client side
+      io.emit('group-created', populatedGroup);
+    }
+
     res.status(201).json(populatedGroup);
   } catch (error) {
     res.status(500).json({ error: 'Server error' });

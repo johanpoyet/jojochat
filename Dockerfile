@@ -23,6 +23,9 @@ COPY api/ ./api/
 
 COPY --from=front-builder /app/front/dist ./api/public
 
+RUN mkdir -p ./api/uploads/avatars ./api/uploads/media && \
+    chown -R app:app ./api/uploads
+
 EXPOSE 3000
 USER app
 WORKDIR /app/api

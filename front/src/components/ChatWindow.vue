@@ -2,9 +2,10 @@
 import { ref, nextTick, watch } from 'vue'
 import { useChatStore } from '../stores/chat'
 import { useAuthStore } from '../stores/auth'
-import { Search, MoreVertical, Check, CheckCheck, Smile, Edit2, Trash2, X, Ban } from 'lucide-vue-next'
+import { Search, MoreVertical, Check, CheckCheck, Smile, Edit2, Trash2, X, Ban, Info } from 'lucide-vue-next'
 import MessageInput from './MessageInput.vue'
 import TypingIndicator from './TypingIndicator.vue'
+import ConversationInfo from './ConversationInfo.vue'
 
 const chatStore = useChatStore()
 const authStore = useAuthStore()
@@ -22,6 +23,7 @@ const searchResults = ref([])
 const searchLoading = ref(false)
 const replyingTo = ref(null)
 const hoveredMessage = ref(null)
+const showConversationInfo = ref(false)
 
 const commonEmojis = ['👍', '❤️', '😂', '😮', '😢', '🙏']
 
@@ -324,6 +326,9 @@ const getMediaUrl = (url) => {
           <button class="icon-btn" title="Search" @click="toggleSearch">
             <Search :size="24" />
           </button>
+          <button class="icon-btn" title="Conversation Info" @click="showConversationInfo = true">
+            <Info :size="24" />
+          </button>
           <div class="menu-wrapper">
             <button class="icon-btn" title="Menu" @click="toggleHeaderMenu">
               <MoreVertical :size="24" />
@@ -527,6 +532,13 @@ const getMediaUrl = (url) => {
         <div class="modal-footer-buttons">
           <button @click="closeAlert" class="modal-btn modal-btn-primary">OK</button>
         </div>
+      </div>
+    </div>
+
+    <!-- Conversation Info Panel -->
+    <div v-if="showConversationInfo" class="info-panel-overlay">
+      <div class="info-panel">
+        <ConversationInfo @close="showConversationInfo = false" />
       </div>
     </div>
   </div>
@@ -1424,5 +1436,35 @@ const getMediaUrl = (url) => {
 
 .reply-preview-close:hover {
   background: var(--hover-color);
+}
+
+/* Conversation Info Panel */
+.info-panel-overlay {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.info-panel {
+  width: 100%;
+  max-width: 400px;
+  background: var(--bg-primary);
+  box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
+  animation: slideInRight 0.3s ease-out;
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
 }
 </style>

@@ -255,6 +255,16 @@ export const useChatStore = defineStore('chat', () => {
       }
       await getConversations()
     })
+
+    authStore.socket.on('group-deleted', (data) => {
+      const { groupId } = data
+
+      // If the deleted group is currently selected, clear selection
+      if (selectedGroup.value && selectedGroup.value._id === groupId) {
+        selectedGroup.value = null
+        messages.value = []
+      }
+    })
   }
 
   const isTyping = computed(() => {

@@ -23,6 +23,7 @@ const showBlockedContacts = ref(false)
 
 onMounted(async () => {
   chatStore.setupSocketListeners()
+  groupsStore.setupSocketListeners()
   await chatStore.getUsers()
   await chatStore.getConversations()
   await groupsStore.fetchGroups()

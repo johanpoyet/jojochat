@@ -37,6 +37,13 @@ const createGroup = async (req, res) => {
       .populate('creator', 'username avatar')
       .populate('members.user', 'username avatar status');
 
+    // Emit socket event to all group members
+    const io = req.app.get('io');
+    if (io) {
+      // Broadcast to all connected clients - they will filter by membership on client side
+      io.emit('group-created', populatedGroup);
+    }
+
     res.status(201).json(populatedGroup);
   } catch (error) {
     res.status(500).json({ error: 'Server error' });
@@ -130,13 +137,19 @@ const deleteGroup = async (req, res) => {
     const { id } = req.params;
     const userId = req.user._id;
 
-    const group = await Group.findById(id);
+    const group = await Group.findById(id).populate('members.user', '_id');
     if (!group) {
       return res.status(404).json({ error: 'Group not found' });
     }
 
     if (group.creator.toString() !== userId.toString()) {
       return res.status(403).json({ error: 'Only the creator can delete the group' });
+    }
+
+    // Emit socket event to all group members before deleting
+    const io = req.app.get('io');
+    if (io) {
+      io.emit('group-deleted', { groupId: id });
     }
 
     group.isActive = false;

@@ -195,6 +195,46 @@ export const useGroupsStore = defineStore('groups', () => {
     }
   }
 
+  const setupSocketListeners = () => {
+    if (!authStore.socket || !authStore.user) return
+
+    const userId = authStore.user.id || authStore.user._id
+
+    // Listen for new groups created where this user is a member
+    authStore.socket.on('group-created', (group) => {
+      console.log('Group created event received:', group)
+
+      // Check if current user is a member of this group
+      const isMember = group.members.some(m => {
+        const memberId = m.user?._id || m.user
+        return memberId === userId || memberId.toString() === userId.toString()
+      })
+
+      if (isMember) {
+        console.log('User is member of this group, adding to list')
+        // Check if group already exists in the list
+        const exists = groups.value.some(g => g._id === group._id)
+        if (!exists) {
+          groups.value.unshift(group)
+        }
+      }
+    })
+
+    // Listen for groups being deleted
+    authStore.socket.on('group-deleted', (data) => {
+      console.log('Group deleted event received:', data)
+      const { groupId } = data
+
+      // Remove the group from the list
+      groups.value = groups.value.filter(g => g._id !== groupId)
+
+      // If this was the currently selected group, clear the selection
+      if (currentGroup.value?._id === groupId) {
+        currentGroup.value = null
+      }
+    })
+  }
+
   return {
     groups,
     currentGroup,
@@ -208,6 +248,7 @@ export const useGroupsStore = defineStore('groups', () => {
     addMember,
     removeMember,
     updateMemberRole,
-    leaveGroup
+    leaveGroup,
+    setupSocketListeners
   }
 })

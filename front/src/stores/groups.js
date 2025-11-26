@@ -219,6 +219,20 @@ export const useGroupsStore = defineStore('groups', () => {
         }
       }
     })
+
+    // Listen for groups being deleted
+    authStore.socket.on('group-deleted', (data) => {
+      console.log('Group deleted event received:', data)
+      const { groupId } = data
+
+      // Remove the group from the list
+      groups.value = groups.value.filter(g => g._id !== groupId)
+
+      // If this was the currently selected group, clear the selection
+      if (currentGroup.value?._id === groupId) {
+        currentGroup.value = null
+      }
+    })
   }
 
   return {

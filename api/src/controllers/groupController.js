@@ -137,13 +137,19 @@ const deleteGroup = async (req, res) => {
     const { id } = req.params;
     const userId = req.user._id;
 
-    const group = await Group.findById(id);
+    const group = await Group.findById(id).populate('members.user', '_id');
     if (!group) {
       return res.status(404).json({ error: 'Group not found' });
     }
 
     if (group.creator.toString() !== userId.toString()) {
       return res.status(403).json({ error: 'Only the creator can delete the group' });
+    }
+
+    // Emit socket event to all group members before deleting
+    const io = req.app.get('io');
+    if (io) {
+      io.emit('group-deleted', { groupId: id });
     }
 
     group.isActive = false;

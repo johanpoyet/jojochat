@@ -187,9 +187,6 @@ const testSentryError = () => {
               <Settings :size="18" />
               Settings
             </button>
-            <button @click="testSentryError" class="menu-item sentry-test">
-              🐛 Test Sentry
-            </button>
             <button @click="handleLogout" class="menu-item">
               <UserCog :size="18" />
               Logout

@@ -9,6 +9,7 @@ router.use(authMiddleware);
 router.post('/', messageController.createMessage);
 router.get('/conversations', conversationController.getConversations);
 router.delete('/conversations/:conversationId', conversationController.deleteConversation);
+router.post('/archive/:user_id', conversationController.archiveConversation);
 router.get('/search', messageController.searchMessages);
 router.get('/group/:group_id', messageController.getGroupMessages);
 router.get('/:user_id', messageController.getMessagesByUser);

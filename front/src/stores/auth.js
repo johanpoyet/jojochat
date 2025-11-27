@@ -98,6 +98,7 @@ export const useAuthStore = defineStore('auth', () => {
     user.value = null
     token.value = null
     isAuthenticated.value = false
+    socket.value = null
     localStorage.removeItem('token')
     localStorage.removeItem('user')
   }

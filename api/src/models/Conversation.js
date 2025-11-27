@@ -15,6 +15,11 @@ const conversationSchema = new mongoose.Schema({
     type: Map,
     of: Number,
     default: {}
+  },
+  archived: {
+    type: Map,
+    of: Boolean,
+    default: {}
   }
 }, {
   timestamps: true

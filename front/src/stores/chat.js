@@ -104,6 +104,22 @@ export const useChatStore = defineStore('chat', () => {
 
     try {
       await getMessages(user.id)
+
+      const conv = conversations.value.find(c => c.otherUser.id === user.id)
+      if (conv && conv.unreadCount > 0) {
+        const unreadMessages = messages.value.filter(
+          m => m.sender._id === user.id && m.status !== 'read'
+        )
+
+        for (const message of unreadMessages) {
+          await fetch(`${authStore.API_URL}/api/messages/${message._id}/read`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${authStore.token}` }
+          })
+        }
+
+        conv.unreadCount = 0
+      }
     } finally {
       loading.value = false
     }
@@ -129,7 +145,21 @@ export const useChatStore = defineStore('chat', () => {
   const setupSocketListeners = () => {
     if (!authStore.socket) return
 
-    // Listener pour les erreurs WebSocket
+    authStore.socket.off('error')
+    authStore.socket.off('new-message')
+    authStore.socket.off('new-group-message')
+    authStore.socket.off('message-sent')
+    authStore.socket.off('user-typing')
+    authStore.socket.off('user-stop-typing')
+    authStore.socket.off('message-read-confirmation')
+    authStore.socket.off('user-online')
+    authStore.socket.off('user-offline')
+    authStore.socket.off('reaction-added')
+    authStore.socket.off('reaction-removed')
+    authStore.socket.off('message-edited')
+    authStore.socket.off('message-deleted')
+    authStore.socket.off('group-deleted')
+
     authStore.socket.on('error', (error) => {
       console.error('Socket error:', error)
       alert(`Error: ${error.message || 'Unknown error'}`)
@@ -271,6 +301,30 @@ export const useChatStore = defineStore('chat', () => {
     return selectedUser.value && typingUsers.value.includes(selectedUser.value.id)
   })
 
+  const archiveConversation = async (userId) => {
+    try {
+      const response = await fetch(`${authStore.API_URL}/api/messages/archive/${userId}`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${authStore.token}` }
+      })
+
+      if (response.ok) {
+        const conv = conversations.value.find(c => c.otherUser.id === userId)
+        if (conv) {
+          conv.archived = !conv.archived
+        }
+      }
+    } catch (error) {
+      console.error('Failed to archive conversation:', error)
+    }
+  }
+
+  const clearSelection = () => {
+    selectedUser.value = null
+    selectedGroup.value = null
+    messages.value = []
+  }
+
   return {
     conversations,
     selectedUser,
@@ -290,6 +344,8 @@ export const useChatStore = defineStore('chat', () => {
     deleteMessage,
     selectUser,
     selectGroup,
-    setupSocketListeners
+    setupSocketListeners,
+    archiveConversation,
+    clearSelection
   }
 })

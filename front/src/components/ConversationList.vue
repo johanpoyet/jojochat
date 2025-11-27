@@ -4,7 +4,7 @@ import { useAuthStore } from '../stores/auth'
 import { useChatStore } from '../stores/chat'
 import { useGroupsStore } from '../stores/groups'
 import { storeToRefs } from 'pinia'
-import { Search, MessageSquarePlus, MoreVertical, CircleDashed, User, X, Check, Users, Settings, UserCog } from 'lucide-vue-next'
+import { Search, MessageSquarePlus, MoreVertical, CircleDashed, User, X, Check, Users, Settings, UserCog, Archive } from 'lucide-vue-next'
 
 const emit = defineEmits(['logout', 'show-status', 'show-settings', 'show-profile'])
 
@@ -12,6 +12,8 @@ const authStore = useAuthStore()
 const chatStore = useChatStore()
 const groupsStore = useGroupsStore()
 const { typingUsers } = storeToRefs(chatStore)
+
+const activeFilter = ref('all')
 
 const showUserModal = ref(false)
 const showMenu = ref(false)
@@ -27,6 +29,7 @@ const toggleMenu = () => {
 
 const handleLogout = () => {
   showMenu.value = false
+  chatStore.clearSelection()
   emit('logout')
 }
 
@@ -138,6 +141,21 @@ const getLastMessageTime = (timestamp) => {
 const isUserTyping = (userId) => {
   return typingUsers.value.includes(userId)
 }
+
+const filteredConversations = computed(() => {
+  if (activeFilter.value === 'unread') {
+    return chatStore.conversations.filter(conv => conv.unreadCount > 0)
+  } else if (activeFilter.value === 'archived') {
+    return chatStore.conversations.filter(conv => conv.archived)
+  } else {
+    return chatStore.conversations.filter(conv => !conv.archived)
+  }
+})
+
+const archiveConversation = async (conv, event) => {
+  event.stopPropagation()
+  await chatStore.archiveConversation(conv.otherUser.id)
+}
 </script>
 
 <template>
@@ -183,6 +201,33 @@ const isUserTyping = (userId) => {
       </div>
     </div>
 
+    <div class="filter-tabs">
+      <button
+        :class="['filter-tab', { active: activeFilter === 'all' }]"
+        @click="activeFilter = 'all'"
+      >
+        All
+      </button>
+      <button
+        :class="['filter-tab', { active: activeFilter === 'unread' }]"
+        @click="activeFilter = 'unread'"
+      >
+        Unread
+        <span v-if="chatStore.conversations.filter(c => c.unreadCount > 0 && !c.archived).length > 0" class="filter-badge">
+          {{ chatStore.conversations.filter(c => c.unreadCount > 0 && !c.archived).length }}
+        </span>
+      </button>
+      <button
+        :class="['filter-tab', { active: activeFilter === 'archived' }]"
+        @click="activeFilter = 'archived'"
+      >
+        Archived
+        <span v-if="chatStore.conversations.filter(c => c.archived).length > 0" class="filter-badge">
+          {{ chatStore.conversations.filter(c => c.archived).length }}
+        </span>
+      </button>
+    </div>
+
     <div class="conversations">
       <!-- Groups -->
       <div
@@ -209,7 +254,7 @@ const isUserTyping = (userId) => {
 
       <!-- Direct Conversations -->
       <div
-        v-for="conv in chatStore.conversations"
+        v-for="conv in filteredConversations"
         :key="conv.id"
         class="conversation-item"
         :class="{ active: chatStore.selectedUser?.id === conv.otherUser.id }"
@@ -228,9 +273,18 @@ const isUserTyping = (userId) => {
         <div class="conv-info">
           <div class="conv-header">
             <h4>{{ conv.otherUser.username }}</h4>
-            <span v-if="conv.lastMessage" class="time">
-              {{ getLastMessageTime(conv.lastMessage.createdAt) }}
-            </span>
+            <div class="header-right">
+              <span v-if="conv.lastMessage" class="time">
+                {{ getLastMessageTime(conv.lastMessage.createdAt) }}
+              </span>
+              <button
+                class="archive-btn"
+                @click="archiveConversation(conv, $event)"
+                :title="conv.archived ? 'Unarchive conversation' : 'Archive conversation'"
+              >
+                <Archive :size="18" />
+              </button>
+            </div>
           </div>
           <div class="conv-preview">
             <p v-if="isUserTyping(conv.otherUser.id)" class="typing-text">
@@ -567,12 +621,21 @@ const isUserTyping = (userId) => {
   color: var(--text-primary);
   font-weight: 400;
   line-height: 21px;
+  flex: 1;
+  min-width: 0;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .time {
   font-size: 12px;
   color: var(--text-secondary);
   line-height: 14px;
+  white-space: nowrap;
 }
 
 .conv-preview {
@@ -866,5 +929,79 @@ const isUserTyping = (userId) => {
 .group-members {
   color: #667781;
   font-size: 14px;
+}
+
+/* Filter Tabs */
+.filter-tabs {
+  display: flex;
+  gap: 8px;
+  padding: 12px 16px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.filter-tab {
+  position: relative;
+  padding: 6px 16px;
+  border: none;
+  border-radius: 20px;
+  background: var(--bg-primary);
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.filter-tab:hover {
+  background: var(--hover-color);
+}
+
+.filter-tab.active {
+  background: var(--accent-color);
+  color: white;
+}
+
+.filter-badge {
+  background: rgba(255, 255, 255, 0.3);
+  color: white;
+  border-radius: 10px;
+  padding: 2px 6px;
+  font-size: 11px;
+  font-weight: 600;
+  min-width: 18px;
+  text-align: center;
+}
+
+.filter-tab.active .filter-badge {
+  background: rgba(255, 255, 255, 0.4);
+}
+
+/* Archive Button */
+.archive-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 50%;
+  opacity: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.conversation-item:hover .archive-btn {
+  opacity: 1;
+}
+
+.archive-btn:hover {
+  background: var(--hover-color);
+  color: var(--accent-color);
 }
 </style>

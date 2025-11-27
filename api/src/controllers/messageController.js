@@ -2,6 +2,7 @@ const Message = require('../models/Message');
 const Conversation = require('../models/Conversation');
 const User = require('../models/User');
 const Group = require('../models/Group');
+const { captureError } = require('../config/sentry');
 
 const createMessage = async (req, res) => {
   try {
@@ -68,6 +69,11 @@ const createMessage = async (req, res) => {
 
     res.status(201).json(populatedMessage);
   } catch (error) {
+    captureError(error, {
+      function: 'createMessage',
+      recipient_id: req.body.recipient_id,
+      userId: req.user?._id
+    });
     res.status(500).json({ error: 'Server error' });
   }
 };
@@ -138,6 +144,11 @@ const getMessagesByUser = async (req, res) => {
       }
     });
   } catch (error) {
+    captureError(error, {
+      function: 'getMessagesByUser',
+      user_id: req.params.user_id,
+      userId: req.user?._id
+    });
     res.status(500).json({ error: 'Server error' });
   }
 };

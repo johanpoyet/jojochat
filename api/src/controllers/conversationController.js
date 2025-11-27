@@ -44,6 +44,7 @@ const getConversations = async (req, res) => {
         );
 
         const unreadCount = conv.unreadCount.get(userId.toString()) || 0;
+        const archived = conv.archived.get(userId.toString()) || false;
 
         return {
           id: conv._id,
@@ -59,6 +60,7 @@ const getConversations = async (req, res) => {
             isSender: conv.lastMessage.sender.toString() === userId.toString()
           } : null,
           unreadCount,
+          archived,
           updatedAt: conv.updatedAt
         };
       });
@@ -104,4 +106,30 @@ const deleteConversation = async (req, res) => {
   }
 };
 
-module.exports = { getConversations, deleteConversation };
+const archiveConversation = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const { user_id } = req.params;
+
+    const conversation = await Conversation.findOrCreate(userId, user_id);
+
+    if (!conversation) {
+      return res.status(404).json({ error: 'Conversation not found' });
+    }
+
+    const currentStatus = conversation.archived.get(userId.toString()) || false;
+    conversation.archived.set(userId.toString(), !currentStatus);
+
+    await conversation.save();
+
+    res.json({
+      message: 'Conversation archive status updated',
+      archived: !currentStatus
+    });
+  } catch (error) {
+    console.error('Archive conversation error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
+module.exports = { getConversations, deleteConversation, archiveConversation };

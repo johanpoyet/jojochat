@@ -15,10 +15,11 @@ const socketHandler = require('./socket/socketHandler');
 const path = require('path');
 
 const app = express();
-// initialize Sentry (if configured)
-const { initSentry, Sentry } = require('./config/sentry');
-initSentry(app);
 const server = http.createServer(app);
+const { initSentry, captureError } = require('./config/sentry');
+
+initSentry(app);
+
 const io = new Server(server, {
   cors: {
     origin: 'http://localhost:5173',
@@ -31,12 +32,6 @@ if (process.env.NODE_ENV !== 'test') {
   connectDB();
 }
 
-// Sentry request/tracing handlers should come early in the middleware chain
-if (process.env.SENTRY_DSN) {
-  app.use(Sentry.Handlers.requestHandler());
-  app.use(Sentry.Handlers.tracingHandler());
-}
-
 app.use(cors({
   origin: 'http://localhost:5173',
   credentials: true
@@ -44,7 +39,6 @@ app.use(cors({
 app.use(express.json());
 app.use(express.static('public'));
 
-// Health endpoint for CI/CD checks
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok' });
 });
@@ -63,6 +57,17 @@ socketHandler(io);
 
 app.set('io', io);
 
+app.use((err, req, res, next) => {
+  captureError(err, {
+    method: req.method,
+    url: req.url,
+    userId: req.user?._id
+  });
+  res.status(err.statusCode || 500).json({
+    error: err.message || 'Server error'
+  });
+});
+
 const PORT = process.env.PORT || 3000;
 
 if (process.env.NODE_ENV !== 'test') {
@@ -71,29 +76,14 @@ if (process.env.NODE_ENV !== 'test') {
   });
 }
 
-// Sentry error handler should be registered after all routes/middlewares
 if (process.env.SENTRY_DSN) {
-  app.use(Sentry.Handlers.errorHandler());
-
-  // capture unhandled rejections and uncaught exceptions
   process.on('unhandledRejection', (reason) => {
-    try {
-      Sentry.captureException(reason);
-      // best-effort flush before exit in some deploy scenarios
-      Sentry.flush(2000).then(() => {});
-    } catch (e) {
-      console.error('Failed to report unhandledRejection to Sentry', e);
-    }
+    captureError(reason instanceof Error ? reason : new Error(String(reason)));
   });
 
   process.on('uncaughtException', (err) => {
-    try {
-      Sentry.captureException(err);
-      Sentry.flush(2000).then(() => process.exit(1));
-    } catch (e) {
-      console.error('Failed to report uncaughtException to Sentry', e);
-      process.exit(1);
-    }
+    captureError(err);
+    process.exit(1);
   });
 }
 

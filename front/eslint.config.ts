@@ -4,10 +4,8 @@ import pluginVue from 'eslint-plugin-vue'
 import pluginVitest from '@vitest/eslint-plugin'
 import pluginPlaywright from 'eslint-plugin-playwright'
 
-// To allow more languages other than `ts` in `.vue` files, uncomment the following lines:
-// import { configureVueProject } from '@vue/eslint-config-typescript'
-// configureVueProject({ scriptLangs: ['ts', 'tsx'] })
-// More info at https://github.com/vuejs/eslint-config-typescript/#advanced-setup
+import { configureVueProject } from '@vue/eslint-config-typescript'
+configureVueProject({ scriptLangs: ['ts', 'tsx', 'js', 'jsx'] })
 
 export default defineConfigWithVueTs(
   {

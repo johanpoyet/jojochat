@@ -55,6 +55,11 @@ const groupSchema = new mongoose.Schema({
     of: Number,
     default: () => new Map()
   },
+  archived: {
+    type: Map,
+    of: Boolean,
+    default: () => new Map()
+  },
   settings: {
     onlyAdminsCanPost: {
       type: Boolean,

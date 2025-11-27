@@ -69,6 +69,7 @@ const getGroups = async (req, res) => {
 
     const formattedGroups = groups.map(group => {
       const unreadCount = group.unreadCount.get(userId.toString()) || 0;
+      const archived = group.archived.get(userId.toString()) || false;
 
       return {
         _id: group._id,
@@ -84,6 +85,7 @@ const getGroups = async (req, res) => {
           isSender: group.lastMessage.sender._id.toString() === userId.toString()
         } : null,
         unreadCount,
+        archived,
         settings: group.settings,
         isActive: group.isActive,
         createdAt: group.createdAt,
@@ -391,6 +393,36 @@ const getGroupMembers = async (req, res) => {
   }
 };
 
+const archiveGroup = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const { id } = req.params;
+
+    const group = await Group.findById(id);
+
+    if (!group) {
+      return res.status(404).json({ error: 'Group not found' });
+    }
+
+    if (!group.isMember(userId)) {
+      return res.status(403).json({ error: 'Not a member of this group' });
+    }
+
+    const currentStatus = group.archived.get(userId.toString()) || false;
+    group.archived.set(userId.toString(), !currentStatus);
+
+    await group.save();
+
+    res.json({
+      message: 'Group archive status updated',
+      archived: !currentStatus
+    });
+  } catch (error) {
+    console.error('Archive group error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
 module.exports = {
   createGroup,
   getGroups,
@@ -401,5 +433,6 @@ module.exports = {
   removeMember,
   updateMemberRole,
   leaveGroup,
-  getGroupMembers
+  getGroupMembers,
+  archiveGroup
 };

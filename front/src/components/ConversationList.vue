@@ -148,13 +148,30 @@ const filteredConversations = computed(() => {
   } else if (activeFilter.value === 'archived') {
     return chatStore.conversations.filter(conv => conv.archived)
   } else {
-    return chatStore.conversations.filter(conv => !conv.archived)
+    // Show all conversations including archived
+    return chatStore.conversations
+  }
+})
+
+const filteredGroups = computed(() => {
+  if (activeFilter.value === 'unread') {
+    return groupsStore.groups.filter(group => group.unreadCount > 0)
+  } else if (activeFilter.value === 'archived') {
+    return groupsStore.groups.filter(group => group.archived)
+  } else {
+    // Show all groups including archived
+    return groupsStore.groups
   }
 })
 
 const archiveConversation = async (conv, event) => {
   event.stopPropagation()
   await chatStore.archiveConversation(conv.otherUser.id)
+}
+
+const archiveGroupConversation = async (group, event) => {
+  event.stopPropagation()
+  await groupsStore.archiveGroup(group._id)
 }
 </script>
 
@@ -213,8 +230,8 @@ const archiveConversation = async (conv, event) => {
         @click="activeFilter = 'unread'"
       >
         Unread
-        <span v-if="chatStore.conversations.filter(c => c.unreadCount > 0 && !c.archived).length > 0" class="filter-badge">
-          {{ chatStore.conversations.filter(c => c.unreadCount > 0 && !c.archived).length }}
+        <span v-if="(chatStore.conversations.filter(c => c.unreadCount > 0 && !c.archived).length + groupsStore.groups.filter(g => g.unreadCount > 0 && !g.archived).length) > 0" class="filter-badge">
+          {{ chatStore.conversations.filter(c => c.unreadCount > 0 && !c.archived).length + groupsStore.groups.filter(g => g.unreadCount > 0 && !g.archived).length }}
         </span>
       </button>
       <button
@@ -222,8 +239,8 @@ const archiveConversation = async (conv, event) => {
         @click="activeFilter = 'archived'"
       >
         Archived
-        <span v-if="chatStore.conversations.filter(c => c.archived).length > 0" class="filter-badge">
-          {{ chatStore.conversations.filter(c => c.archived).length }}
+        <span v-if="(chatStore.conversations.filter(c => c.archived).length + groupsStore.groups.filter(g => g.archived).length) > 0" class="filter-badge">
+          {{ chatStore.conversations.filter(c => c.archived).length + groupsStore.groups.filter(g => g.archived).length }}
         </span>
       </button>
     </div>
@@ -231,7 +248,7 @@ const archiveConversation = async (conv, event) => {
     <div class="conversations">
       <!-- Groups -->
       <div
-        v-for="group in groupsStore.groups"
+        v-for="group in filteredGroups"
         :key="'group-' + group._id"
         class="conversation-item"
         :class="{ active: chatStore.selectedGroup?._id === group._id }"
@@ -243,9 +260,18 @@ const archiveConversation = async (conv, event) => {
         <div class="conv-info">
           <div class="conv-header">
             <h4>{{ group.name }}</h4>
-            <span v-if="group.lastMessage" class="time">
-              {{ getLastMessageTime(group.lastMessage.createdAt) }}
-            </span>
+            <div class="header-right">
+              <span v-if="group.lastMessage" class="time">
+                {{ getLastMessageTime(group.lastMessage.createdAt) }}
+              </span>
+              <button
+                class="archive-btn"
+                @click="archiveGroupConversation(group, $event)"
+                :title="group.archived ? 'Unarchive group' : 'Archive group'"
+              >
+                <Archive :size="18" />
+              </button>
+            </div>
           </div>
           <div class="conv-preview">
             <p v-if="group.lastMessage && !group.lastMessage.deleted">

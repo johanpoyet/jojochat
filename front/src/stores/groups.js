@@ -228,6 +228,25 @@ export const useGroupsStore = defineStore('groups', () => {
     }
   }
 
+  const archiveGroup = async (groupId) => {
+    try {
+      const response = await fetch(`${authStore.API_URL}/api/groups/${groupId}/archive`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${authStore.token}` }
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        const group = groups.value.find(g => g._id === groupId)
+        if (group) {
+          group.archived = data.archived
+        }
+      }
+    } catch (error) {
+      console.error('Failed to archive group:', error)
+    }
+  }
+
   const setupSocketListeners = () => {
     if (!authStore.socket || !authStore.user) return
 
@@ -305,6 +324,7 @@ export const useGroupsStore = defineStore('groups', () => {
     leaveGroup,
     updateGroupLastMessage,
     resetUnreadCount,
+    archiveGroup,
     setupSocketListeners
   }
 })

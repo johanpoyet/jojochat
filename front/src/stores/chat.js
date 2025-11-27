@@ -320,9 +320,10 @@ export const useChatStore = defineStore('chat', () => {
       })
 
       if (response.ok) {
+        const data = await response.json()
         const conv = conversations.value.find(c => c.otherUser.id === userId)
         if (conv) {
-          conv.archived = !conv.archived
+          conv.archived = data.archived
         }
       }
     } catch (error) {

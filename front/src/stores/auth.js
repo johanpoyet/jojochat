@@ -80,6 +80,26 @@ export const useAuthStore = defineStore('auth', () => {
     return updatedUser
   }
 
+  const deleteAccount = async (password) => {
+    const response = await fetch(`${API_URL}/api/users/account`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token.value}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ password })
+    })
+
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.error || 'Account deletion failed')
+    }
+
+    // Logout after successful deletion
+    await logout()
+    return await response.json()
+  }
+
   const logout = async () => {
     if (token.value) {
       await fetch(`${API_URL}/api/auth/logout`, {
@@ -139,6 +159,7 @@ export const useAuthStore = defineStore('auth', () => {
     register,
     login,
     updateProfile,
+    deleteAccount,
     logout,
     API_URL
   }

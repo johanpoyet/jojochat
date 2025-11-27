@@ -41,7 +41,19 @@ const messageSchema = new mongoose.Schema({
   content: {
     type: String,
     maxlength: 5000,
-    default: ''
+    required: function() {
+      return this.type === 'text';
+    },
+    validate: {
+      validator: function(v) {
+        // If type is text, content cannot be empty
+        if (this.type === 'text') {
+          return v && v.trim().length > 0;
+        }
+        return true;
+      },
+      message: 'Content cannot be empty for text messages'
+    }
   },
   mediaUrl: {
     type: String,

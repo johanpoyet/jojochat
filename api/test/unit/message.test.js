@@ -48,28 +48,32 @@ describe('Message Model', () => {
     });
 
     it('should fail without content', async () => {
+      let error;
       try {
         await Message.create({
           sender: sender._id,
           recipient: recipient._id
         });
-        expect.fail('Should fail');
-      } catch (error) {
-        expect(error.name).to.equal('ValidationError');
+      } catch (err) {
+        error = err;
       }
+      expect(error).to.exist;
+      expect(error.name).to.equal('ValidationError');
     });
 
     it('should fail with empty content', async () => {
+      let error;
       try {
         await Message.create({
           sender: sender._id,
           recipient: recipient._id,
           content: ''
         });
-        expect.fail('Should fail');
-      } catch (error) {
-        expect(error.name).to.equal('ValidationError');
+      } catch (err) {
+        error = err;
       }
+      expect(error).to.exist;
+      expect(error.name).to.equal('ValidationError');
     });
   });
 });

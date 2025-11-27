@@ -62,7 +62,7 @@ export const useGroupsStore = defineStore('groups', () => {
 
       const data = await response.json()
       if (response.ok) {
-        groups.value.push(data)
+        // Don't add here, the socket event 'group-created' will handle it
         return { success: true, group: data }
       }
       return { success: false, error: data.error }

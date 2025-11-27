@@ -156,10 +156,6 @@ const archiveConversation = async (conv, event) => {
   event.stopPropagation()
   await chatStore.archiveConversation(conv.otherUser.id)
 }
-
-const testSentryError = () => {
-  throw new Error('Test Sentry Error - Frontend')
-}
 </script>
 
 <template>

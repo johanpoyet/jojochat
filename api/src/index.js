@@ -17,7 +17,9 @@ const path = require('path');
 const app = express();
 const server = http.createServer(app);
 const { initSentry, captureError } = require('./config/sentry');
+
 initSentry(app);
+
 const io = new Server(server, {
   cors: {
     origin: 'http://localhost:5173',
@@ -37,7 +39,6 @@ app.use(cors({
 app.use(express.json());
 app.use(express.static('public'));
 
-// Health endpoint for CI/CD checks
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok' });
 });

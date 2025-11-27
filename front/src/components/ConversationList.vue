@@ -198,11 +198,24 @@ const isUserTyping = (userId) => {
         <div class="conv-info">
           <div class="conv-header">
             <h4>{{ group.name }}</h4>
+            <span v-if="group.lastMessage" class="time">
+              {{ getLastMessageTime(group.lastMessage.createdAt) }}
+            </span>
           </div>
           <div class="conv-preview">
-            <p class="group-members">
+            <p v-if="group.lastMessage && !group.lastMessage.deleted">
+              {{ group.lastMessage.isSender ? 'You: ' : `${group.lastMessage.sender.username}: ` }}
+              {{ group.lastMessage.content }}
+            </p>
+            <p v-else-if="group.lastMessage && group.lastMessage.deleted" class="deleted-message-preview">
+              Message supprimé
+            </p>
+            <p v-else class="group-members">
               {{ group.members.length }} member{{ group.members.length > 1 ? 's' : '' }}
             </p>
+            <span v-if="group.unreadCount > 0" class="unread-badge">
+              {{ group.unreadCount }}
+            </span>
           </div>
         </div>
       </div>

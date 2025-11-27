@@ -50,6 +50,11 @@ const groupSchema = new mongoose.Schema({
     ref: 'Message',
     default: null
   },
+  unreadCount: {
+    type: Map,
+    of: Number,
+    default: () => new Map()
+  },
   settings: {
     onlyAdminsCanPost: {
       type: Boolean,

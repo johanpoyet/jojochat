@@ -320,6 +320,16 @@ const socketHandler = (io) => {
         console.log('[send-group-message] Message created:', message._id);
 
         group.lastMessage = message._id;
+
+        // Increment unread count for all members except the sender
+        group.members.forEach(member => {
+          const memberId = member.user.toString();
+          if (memberId !== socket.userId) {
+            const currentCount = group.unreadCount.get(memberId) || 0;
+            group.unreadCount.set(memberId, currentCount + 1);
+          }
+        });
+
         await group.save();
 
         const populatedMessage = await Message.findById(message._id)
@@ -357,6 +367,10 @@ const socketHandler = (io) => {
       const group = await Group.findById(group_id);
       if (group && group.isMember(socket.userId)) {
         socket.join(`group:${group_id}`);
+
+        // Reset unread count for this user
+        group.unreadCount.set(socket.userId, 0);
+        await group.save();
       }
     });
 
@@ -535,6 +549,17 @@ const socketHandler = (io) => {
 
             conversation.lastMessage = lastNonDeletedMessage ? lastNonDeletedMessage._id : null;
             await conversation.save();
+          }
+        } else if (message.group) {
+          const group = await Group.findById(message.group);
+          if (group && group.lastMessage && group.lastMessage.toString() === message_id) {
+            const lastNonDeletedMessage = await Message.findOne({
+              group: message.group,
+              deleted: false
+            }).sort({ createdAt: -1 });
+
+            group.lastMessage = lastNonDeletedMessage ? lastNonDeletedMessage._id : null;
+            await group.save();
           }
         }
 

@@ -60,10 +60,38 @@ const getGroups = async (req, res) => {
     })
       .populate('creator', 'username avatar')
       .populate('members.user', 'username avatar status')
-      .populate('lastMessage')
+      .populate({
+        path: 'lastMessage',
+        select: 'content createdAt sender deleted',
+        populate: { path: 'sender', select: 'username avatar' }
+      })
       .sort({ updatedAt: -1 });
 
-    res.json({ groups });
+    const formattedGroups = groups.map(group => {
+      const unreadCount = group.unreadCount.get(userId.toString()) || 0;
+
+      return {
+        _id: group._id,
+        name: group.name,
+        description: group.description,
+        avatar: group.avatar,
+        creator: group.creator,
+        members: group.members,
+        lastMessage: group.lastMessage && !group.lastMessage.deleted ? {
+          content: group.lastMessage.content,
+          createdAt: group.lastMessage.createdAt,
+          sender: group.lastMessage.sender,
+          isSender: group.lastMessage.sender._id.toString() === userId.toString()
+        } : null,
+        unreadCount,
+        settings: group.settings,
+        isActive: group.isActive,
+        createdAt: group.createdAt,
+        updatedAt: group.updatedAt
+      };
+    });
+
+    res.json({ groups: formattedGroups });
   } catch (error) {
     res.status(500).json({ error: 'Server error' });
   }

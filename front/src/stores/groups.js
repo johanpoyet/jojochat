@@ -195,6 +195,39 @@ export const useGroupsStore = defineStore('groups', () => {
     }
   }
 
+  const updateGroupLastMessage = (groupId, message, isCurrentUser) => {
+    const group = groups.value.find(g => g._id === groupId)
+    if (group) {
+      // Update last message
+      group.lastMessage = {
+        content: message.content,
+        createdAt: message.createdAt,
+        sender: message.sender,
+        isSender: isCurrentUser,
+        deleted: false
+      }
+
+      // Increment unread count if not current user
+      if (!isCurrentUser) {
+        group.unreadCount = (group.unreadCount || 0) + 1
+      }
+
+      // Move group to top of list
+      const index = groups.value.findIndex(g => g._id === groupId)
+      if (index > 0) {
+        groups.value.splice(index, 1)
+        groups.value.unshift(group)
+      }
+    }
+  }
+
+  const resetUnreadCount = (groupId) => {
+    const group = groups.value.find(g => g._id === groupId)
+    if (group) {
+      group.unreadCount = 0
+    }
+  }
+
   const setupSocketListeners = () => {
     if (!authStore.socket || !authStore.user) return
 
@@ -233,6 +266,27 @@ export const useGroupsStore = defineStore('groups', () => {
         currentGroup.value = null
       }
     })
+
+    // Listen for new group messages
+    authStore.socket.on('new-group-message', (data) => {
+      const { group_id, message } = data
+      const isCurrentUser = message.sender._id === userId
+      updateGroupLastMessage(group_id, message, isCurrentUser)
+    })
+
+    // Listen for messages sent by current user
+    authStore.socket.on('message-sent', (message) => {
+      if (message.group) {
+        const groupId = typeof message.group === 'string' ? message.group : message.group._id
+        updateGroupLastMessage(groupId, message, true)
+      }
+    })
+
+    // Listen for deleted messages
+    authStore.socket.on('message-deleted', async (data) => {
+      // Refresh groups to update last message if it was deleted
+      await fetchGroups()
+    })
   }
 
   return {
@@ -249,6 +303,8 @@ export const useGroupsStore = defineStore('groups', () => {
     removeMember,
     updateMemberRole,
     leaveGroup,
+    updateGroupLastMessage,
+    resetUnreadCount,
     setupSocketListeners
   }
 })

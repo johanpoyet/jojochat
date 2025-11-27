@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { useAuthStore } from './auth'
+import { useGroupsStore } from './groups'
 
 export const useChatStore = defineStore('chat', () => {
   const authStore = useAuthStore()
@@ -121,6 +122,10 @@ export const useChatStore = defineStore('chat', () => {
       if (authStore.socket) {
         authStore.socket.emit('join-group-room', { group_id: group._id })
       }
+
+      // Reset unread count locally
+      const groupsStore = useGroupsStore()
+      groupsStore.resetUnreadCount(group._id)
     } finally {
       loading.value = false
     }
@@ -148,7 +153,11 @@ export const useChatStore = defineStore('chat', () => {
       // Si on est dans ce groupe, ajouter le message
       if (selectedGroup.value && data.group_id === selectedGroup.value._id) {
         messages.value.push(data.message)
+        // Reset unread count since we're viewing the group
+        const groupsStore = useGroupsStore()
+        groupsStore.resetUnreadCount(data.group_id)
       }
+      // Note: group list update is handled by groups store socket listener
     })
 
     authStore.socket.on('message-sent', (message) => {
@@ -164,6 +173,7 @@ export const useChatStore = defineStore('chat', () => {
           console.log('Adding message to group conversation')
           messages.value.push(message)
         }
+        // Note: group list update is handled by groups store socket listener
       }
       // Pour les messages directs
       else if (message.recipient && selectedUser.value && message.recipient._id === selectedUser.value.id) {
@@ -254,6 +264,7 @@ export const useChatStore = defineStore('chat', () => {
         message.content = 'This message was deleted'
       }
       await getConversations()
+      // Note: group list update for deleted messages is handled by groups store socket listener
     })
 
     authStore.socket.on('group-deleted', (data) => {

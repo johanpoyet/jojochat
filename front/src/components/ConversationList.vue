@@ -14,6 +14,7 @@ const groupsStore = useGroupsStore()
 const { typingUsers } = storeToRefs(chatStore)
 
 const activeFilter = ref('all')
+const searchQuery = ref('')
 
 const showUserModal = ref(false)
 const showMenu = ref(false)
@@ -143,25 +144,45 @@ const isUserTyping = (userId) => {
 }
 
 const filteredConversations = computed(() => {
+  let filtered = chatStore.conversations
+
+  // Apply filter (all, unread, archived)
   if (activeFilter.value === 'unread') {
-    return chatStore.conversations.filter(conv => conv.unreadCount > 0)
+    filtered = filtered.filter(conv => conv.unreadCount > 0)
   } else if (activeFilter.value === 'archived') {
-    return chatStore.conversations.filter(conv => conv.archived)
-  } else {
-    // Show all conversations including archived
-    return chatStore.conversations
+    filtered = filtered.filter(conv => conv.archived)
   }
+
+  // Apply search query
+  if (searchQuery.value.trim()) {
+    const query = searchQuery.value.toLowerCase().trim()
+    filtered = filtered.filter(conv =>
+      conv.otherUser.username.toLowerCase().includes(query)
+    )
+  }
+
+  return filtered
 })
 
 const filteredGroups = computed(() => {
+  let filtered = groupsStore.groups
+
+  // Apply filter (all, unread, archived)
   if (activeFilter.value === 'unread') {
-    return groupsStore.groups.filter(group => group.unreadCount > 0)
+    filtered = filtered.filter(group => group.unreadCount > 0)
   } else if (activeFilter.value === 'archived') {
-    return groupsStore.groups.filter(group => group.archived)
-  } else {
-    // Show all groups including archived
-    return groupsStore.groups
+    filtered = filtered.filter(group => group.archived)
   }
+
+  // Apply search query
+  if (searchQuery.value.trim()) {
+    const query = searchQuery.value.toLowerCase().trim()
+    filtered = filtered.filter(group =>
+      group.name.toLowerCase().includes(query)
+    )
+  }
+
+  return filtered
 })
 
 const archiveConversation = async (conv, event) => {
@@ -214,7 +235,11 @@ const archiveGroupConversation = async (group, event) => {
         <button class="search-icon">
           <Search :size="18" />
         </button>
-        <input type="text" placeholder="Search or start new chat" />
+        <input
+          type="text"
+          placeholder="Search or start new chat"
+          v-model="searchQuery"
+        />
       </div>
     </div>
 

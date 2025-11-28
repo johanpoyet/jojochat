@@ -114,27 +114,6 @@ export const useGroupsStore = defineStore('groups', () => {
     }
   }
 
-  const addMember = async (groupId, userId) => {
-    try {
-      const response = await fetch(`${authStore.API_URL}/api/groups/${groupId}/members`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${authStore.token}`
-        },
-        body: JSON.stringify({ members: [userId] })
-      })
-
-      const data = await response.json()
-      if (response.ok) {
-        if (currentGroup.value?._id === groupId) currentGroup.value = data
-        return { success: true, group: data }
-      }
-      return { success: false, error: data.error }
-    } catch (err) {
-      return { success: false, error: 'Network error' }
-    }
-  }
 
   const removeMember = async (groupId, userId) => {
     try {
@@ -247,6 +226,36 @@ export const useGroupsStore = defineStore('groups', () => {
     }
   }
 
+  const addMemberToGroup = async (groupId, userId) => {
+    try {
+      const response = await fetch(`${authStore.API_URL}/api/groups/${groupId}/members`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authStore.token}`
+        },
+        body: JSON.stringify({ userId })
+      })
+
+      const data = await response.json()
+      if (response.ok) {
+        // Update the current group if it's the one being modified
+        if (currentGroup.value?._id === groupId) {
+          currentGroup.value = data.group
+        }
+        // Update the group in the list
+        const index = groups.value.findIndex(g => g._id === groupId)
+        if (index !== -1) {
+          groups.value[index] = data.group
+        }
+        return { success: true, group: data.group }
+      }
+      return { success: false, error: data.error }
+    } catch (err) {
+      return { success: false, error: 'Network error' }
+    }
+  }
+
   const setupSocketListeners = () => {
     if (!authStore.socket || !authStore.user) return
 
@@ -318,13 +327,13 @@ export const useGroupsStore = defineStore('groups', () => {
     createGroup,
     updateGroup,
     deleteGroup,
-    addMember,
     removeMember,
     updateMemberRole,
     leaveGroup,
     updateGroupLastMessage,
     resetUnreadCount,
     archiveGroup,
+    addMemberToGroup,
     setupSocketListeners
   }
 })

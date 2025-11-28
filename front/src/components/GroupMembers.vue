@@ -1,7 +1,9 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { useAuthStore } from '../stores/auth'
-import { ArrowLeft, Crown, User, Shield, X } from 'lucide-vue-next'
+import { useContactsStore } from '../stores/contacts'
+import { useGroupsStore } from '../stores/groups'
+import { ArrowLeft, Crown, User, Shield, X, UserPlus } from 'lucide-vue-next'
 
 const props = defineProps({
   group: {
@@ -13,20 +15,24 @@ const props = defineProps({
 const emit = defineEmits(['close'])
 
 const authStore = useAuthStore()
+const contactsStore = useContactsStore()
+const groupsStore = useGroupsStore()
 const members = ref([])
+const availableUsers = ref([])
 const loading = ref(true)
+const loadingUsers = ref(false)
 const error = ref('')
+const showAddUsers = ref(false)
 
 const groupCreatorId = ref(null)
 const confirmModal = ref({ show: false, title: '', message: '', onConfirm: null })
 
-const isAdmin = computed(() => {
+const isCurrentUserCreator = computed(() => {
   const creatorId = groupCreatorId.value || props.group.creator || props.group.createdBy
   const userId = authStore.user?.id
 
   return creatorId === userId ||
-         creatorId?._id === userId ||
-         props.group.admins?.includes(userId)
+         creatorId?._id === userId
 })
 
 onMounted(async () => {
@@ -104,7 +110,8 @@ const handleConfirm = () => {
 }
 
 const removeMember = async (memberId, memberUsername) => {
-  if (!isAdmin.value) return
+  // Only creator can remove members
+  if (!isCurrentUserCreator.value) return
 
   showConfirm(
     'Remove Member',
@@ -128,6 +135,50 @@ const removeMember = async (memberId, memberUsername) => {
     }
   )
 }
+
+const fetchAvailableUsers = async () => {
+  loadingUsers.value = true
+  try {
+    const result = await contactsStore.getAllUsers()
+    if (result.success) {
+      // Filter out users who are already members of the group
+      const memberIds = members.value.map(m => m._id.toString())
+      availableUsers.value = result.users.filter(user => {
+        const userId = user.id || user._id
+        return !memberIds.includes(userId.toString())
+      })
+    } else {
+      error.value = result.error || 'Failed to load users'
+    }
+  } catch (err) {
+    error.value = 'Network error'
+  } finally {
+    loadingUsers.value = false
+  }
+}
+
+const toggleAddUsers = async () => {
+  showAddUsers.value = !showAddUsers.value
+  if (showAddUsers.value && availableUsers.value.length === 0) {
+    await fetchAvailableUsers()
+  }
+}
+
+const addUserToGroup = async (userId, username) => {
+  try {
+    const result = await groupsStore.addMemberToGroup(props.group._id, userId)
+    if (result.success) {
+      // Refresh members list
+      await fetchMembers()
+      // Refresh available users list
+      await fetchAvailableUsers()
+    } else {
+      error.value = result.error || 'Failed to add member'
+    }
+  } catch (err) {
+    error.value = 'Network error'
+  }
+}
 </script>
 
 <template>
@@ -143,6 +194,14 @@ const removeMember = async (memberId, memberUsername) => {
       {{ members.length }} {{ members.length === 1 ? 'member' : 'members' }}
     </div>
 
+    <!-- Add Users Section (For all members) -->
+    <div class="add-users-section">
+      <button @click="toggleAddUsers" class="btn-add-users">
+        <UserPlus :size="20" />
+        <span>{{ showAddUsers ? 'Hide Available Users' : 'Add New Members' }}</span>
+      </button>
+    </div>
+
     <div class="members-content">
       <div v-if="loading" class="loading-state">
         <div class="spinner"></div>
@@ -155,6 +214,7 @@ const removeMember = async (memberId, memberUsername) => {
       </div>
 
       <div v-else class="members-list">
+        <div class="section-title">Current Members</div>
         <div
           v-for="member in members"
           :key="member._id"
@@ -185,12 +245,58 @@ const removeMember = async (memberId, memberUsername) => {
           </div>
 
           <button
-            v-if="isAdmin && member.role !== 'creator' && member._id !== authStore.user?.id"
+            v-if="isCurrentUserCreator && member.role !== 'creator' && member._id !== authStore.user?.id"
             @click="removeMember(member._id, member.username)"
             class="btn-remove"
           >
             Remove
           </button>
+        </div>
+
+        <!-- Available Users to Add -->
+        <div v-if="showAddUsers" class="available-users-section">
+          <div class="section-title">Add Members</div>
+
+          <div v-if="loadingUsers" class="loading-state">
+            <div class="spinner"></div>
+            <p>Loading users...</p>
+          </div>
+
+          <div v-else-if="availableUsers.length === 0" class="empty-state">
+            <p>All users are already members of this group.</p>
+          </div>
+
+          <div v-else class="available-users-list">
+            <div
+              v-for="user in availableUsers"
+              :key="user.id || user._id"
+              class="user-item"
+            >
+              <div class="member-avatar">
+                <img
+                  v-if="user.avatar"
+                  :src="`${authStore.API_URL}${user.avatar}`"
+                  alt="avatar"
+                />
+                <div v-else class="avatar-placeholder">
+                  {{ user.username?.charAt(0).toUpperCase() }}
+                </div>
+              </div>
+
+              <div class="member-info">
+                <div class="member-name">{{ user.username }}</div>
+                <div class="user-status">{{ user.statusMessage || 'Available' }}</div>
+              </div>
+
+              <button
+                @click="addUserToGroup(user.id || user._id, user.username)"
+                class="btn-add"
+              >
+                <UserPlus :size="16" />
+                Add
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -259,6 +365,33 @@ const removeMember = async (memberId, memberUsername) => {
   border-bottom: 1px solid var(--border-color);
 }
 
+.add-users-section {
+  background: var(--bg-secondary);
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.btn-add-users {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: var(--accent-color);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background 0.2s;
+}
+
+.btn-add-users:hover {
+  background: var(--accent-dark);
+}
+
 .members-content {
   flex: 1;
   overflow-y: auto;
@@ -306,6 +439,69 @@ const removeMember = async (memberId, memberUsername) => {
 
 .members-list {
   background: var(--bg-secondary);
+}
+
+.section-title {
+  padding: 16px 20px 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--accent-dark);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.available-users-section {
+  margin-top: 16px;
+  border-top: 2px solid var(--border-color);
+}
+
+.empty-state {
+  padding: 32px 20px;
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.available-users-list {
+  background: var(--bg-secondary);
+}
+
+.user-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--border-color);
+  transition: background 0.2s;
+}
+
+.user-item:hover {
+  background: var(--hover-color);
+}
+
+.user-status {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.btn-add {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: var(--accent-color);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.btn-add:hover {
+  background: var(--accent-dark);
+  transform: scale(1.05);
 }
 
 .member-item {

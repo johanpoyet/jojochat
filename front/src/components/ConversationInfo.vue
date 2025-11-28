@@ -1,8 +1,9 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useAuthStore } from '../stores/auth'
 import { useChatStore } from '../stores/chat'
 import { useGroupsStore } from '../stores/groups'
+import { useContactsStore } from '../stores/contacts'
 import { ArrowLeft, Bell, BellOff, Users, Calendar, Image, FileText, Video, X } from 'lucide-vue-next'
 import GroupMembers from './GroupMembers.vue'
 
@@ -11,11 +12,16 @@ const emit = defineEmits(['close'])
 const authStore = useAuthStore()
 const chatStore = useChatStore()
 const groupsStore = useGroupsStore()
+const contactsStore = useContactsStore()
 
 const notificationsMuted = ref(false)
 const showMediaGallery = ref(false)
 const showGroupMembers = ref(false)
 const confirmModal = ref({ show: false, title: '', message: '', onConfirm: null })
+
+onMounted(async () => {
+  await contactsStore.fetchContacts()
+})
 
 const conversationUser = computed(() => {
   return chatStore.selectedGroup || chatStore.selectedUser
@@ -279,6 +285,7 @@ const deleteConversation = () => {
       <!-- Group Settings (if group) -->
       <div v-if="isGroup" class="info-section">
         <div class="section-label">Group Settings</div>
+
         <button class="section-item-button" @click="showGroupMembers = true">
           <div class="item-icon">
             <Users :size="20" />
@@ -332,6 +339,7 @@ const deleteConversation = () => {
         </div>
       </div>
     </div>
+
   </div>
 </template>
 

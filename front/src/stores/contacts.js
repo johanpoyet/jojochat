@@ -21,8 +21,9 @@ export const useContactsStore = defineStore('contacts', () => {
 
       const data = await response.json()
       if (response.ok) {
-        contacts.value = data.filter(c => !c.blocked)
-        blockedContacts.value = data.filter(c => c.blocked)
+        const contactsList = data.contacts || data
+        contacts.value = contactsList.filter(c => !c.blocked)
+        blockedContacts.value = contactsList.filter(c => c.blocked)
       } else {
         error.value = data.error
       }
@@ -158,6 +159,22 @@ export const useContactsStore = defineStore('contacts', () => {
     }
   }
 
+  const getAllUsers = async () => {
+    try {
+      const response = await fetch(`${authStore.API_URL}/api/users`, {
+        headers: { 'Authorization': `Bearer ${authStore.token}` }
+      })
+
+      const data = await response.json()
+      if (response.ok) {
+        return { success: true, users: data.users || [] }
+      }
+      return { success: false, error: data.error }
+    } catch (err) {
+      return { success: false, error: 'Network error' }
+    }
+  }
+
   return {
     contacts,
     blockedContacts,
@@ -169,6 +186,7 @@ export const useContactsStore = defineStore('contacts', () => {
     updateNickname,
     blockContact,
     unblockContact,
-    searchUsers
+    searchUsers,
+    getAllUsers
   }
 })

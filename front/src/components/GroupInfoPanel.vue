@@ -1,10 +1,9 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useGroupsStore } from '../stores/groups'
-import { useContactsStore } from '../stores/contacts'
 import { useAuthStore } from '../stores/auth'
 import {
-  X, Edit2, Camera, UserPlus, Shield, ShieldCheck,
+  X, Edit2, Camera, Shield, ShieldCheck,
   Crown, LogOut, Trash2, MoreVertical, Check
 } from 'lucide-vue-next'
 
@@ -15,19 +14,16 @@ const props = defineProps({
 const emit = defineEmits(['close', 'deleted'])
 
 const groupsStore = useGroupsStore()
-const contactsStore = useContactsStore()
 const authStore = useAuthStore()
 
 const loading = ref(true)
 const editing = ref(null)
 const editName = ref('')
 const editDescription = ref('')
-const showAddMember = ref(false)
 const memberMenu = ref({ show: false, member: null, x: 0, y: 0 })
 
 onMounted(async () => {
   await groupsStore.getGroup(props.groupId)
-  await contactsStore.fetchContacts()
   loading.value = false
 })
 
@@ -39,22 +35,12 @@ const currentUserRole = computed(() => {
   return member?.role
 })
 
-const canManageMembers = computed(() => {
-  return ['creator', 'admin', 'moderator'].includes(currentUserRole.value)
-})
-
 const canEditGroup = computed(() => {
   return ['creator', 'admin'].includes(currentUserRole.value)
 })
 
 const canDeleteGroup = computed(() => {
   return currentUserRole.value === 'creator'
-})
-
-const availableContacts = computed(() => {
-  if (!group.value) return []
-  const memberIds = group.value.members.map(m => m.user._id)
-  return contactsStore.contacts.filter(c => !memberIds.includes(c.contact._id))
 })
 
 const getRoleIcon = (role) => {
@@ -82,14 +68,10 @@ const saveEdit = async () => {
   editing.value = null
 }
 
-const addMember = async (contact) => {
-  await groupsStore.addMember(props.groupId, contact.contact._id)
-  showAddMember.value = false
-}
-
 const showMemberMenu = (event, member) => {
   if (member.user._id === authStore.user?.id) return
-  if (!canManageMembers.value) return
+  // Only creator can remove members, or admins can change roles
+  if (!canDeleteGroup.value && !canEditGroup.value) return
 
   event.preventDefault()
   memberMenu.value = {
@@ -214,29 +196,6 @@ const handleAvatarUpload = async (event) => {
       <div class="members-section">
         <div class="members-header">
           <h3>{{ group.members.length }} members</h3>
-          <button v-if="canManageMembers" @click="showAddMember = true" class="btn-add">
-            <UserPlus :size="20" />
-          </button>
-        </div>
-
-        <div v-if="showAddMember" class="add-member-list">
-          <div v-if="availableContacts.length === 0" class="no-contacts">
-            No contacts to add
-          </div>
-          <div
-            v-for="contact in availableContacts"
-            :key="contact._id"
-            class="contact-item"
-            @click="addMember(contact)"
-          >
-            <div class="member-avatar">
-              <img v-if="contact.contact.avatar" :src="contact.contact.avatar" :alt="contact.contact.username" />
-              <span v-else>{{ contact.contact.username.charAt(0).toUpperCase() }}</span>
-            </div>
-            <span>{{ contact.contact.username }}</span>
-            <UserPlus :size="18" class="add-icon" />
-          </div>
-          <button @click="showAddMember = false" class="btn-cancel-add">Cancel</button>
         </div>
 
         <div class="members-list">
@@ -260,8 +219,19 @@ const handleAvatarUpload = async (event) => {
                 {{ member.role }}
               </span>
             </div>
+
+            <!-- Remove button - Only visible to creator for non-creator members -->
             <button
-              v-if="canManageMembers && member.user._id !== authStore.user?.id"
+              v-if="canDeleteGroup && member.role !== 'creator' && member.user._id !== authStore.user?.id"
+              @click="() => { memberMenu.member = member; removeMember(); }"
+              class="btn-remove-member"
+            >
+              Remove
+            </button>
+
+            <!-- Menu button for role management (admins) -->
+            <button
+              v-else-if="canEditGroup && !canDeleteGroup && member.user._id !== authStore.user?.id"
               @click.stop="showMemberMenu($event, member)"
               class="btn-more"
             >
@@ -293,9 +263,9 @@ const handleAvatarUpload = async (event) => {
         <button @click="changeRole('admin')">Make Admin</button>
         <button @click="changeRole('moderator')">Make Moderator</button>
         <button @click="changeRole('member')">Remove Role</button>
-        <hr />
+        <hr v-if="canDeleteGroup" />
       </template>
-      <button @click="removeMember" class="danger">Remove from Group</button>
+      <button v-if="canDeleteGroup" @click="removeMember" class="danger">Remove from Group</button>
     </div>
   </div>
 </template>
@@ -464,49 +434,21 @@ const handleAvatarUpload = async (event) => {
   color: #008069;
 }
 
-.btn-add {
+.btn-remove-member {
+  padding: 6px 16px;
   background: none;
-  border: none;
-  color: #00a884;
+  border: 1px solid #dc2626;
+  color: #dc2626;
+  border-radius: 6px;
   cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s;
 }
 
-.add-member-list {
-  border-bottom: 1px solid #e9edef;
-  padding: 10px;
-}
-
-.contact-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px;
-  cursor: pointer;
-  border-radius: 8px;
-}
-
-.contact-item:hover {
-  background: #f0f2f5;
-}
-
-.add-icon {
-  margin-left: auto;
-  color: #00a884;
-}
-
-.btn-cancel-add {
-  width: 100%;
-  padding: 10px;
-  border: none;
-  background: none;
-  color: #667781;
-  cursor: pointer;
-}
-
-.no-contacts {
-  padding: 20px;
-  text-align: center;
-  color: #667781;
+.btn-remove-member:hover {
+  background: #dc2626;
+  color: white;
 }
 
 .members-list {

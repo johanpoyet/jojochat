@@ -12,7 +12,7 @@ router.put('/:id', groupController.updateGroup);
 router.delete('/:id', groupController.deleteGroup);
 
 router.get('/:id/members', groupController.getGroupMembers);
-router.post('/:id/members', groupController.addMembers);
+router.post('/:id/members', groupController.addMember);
 router.delete('/:id/members/:memberId', groupController.removeMember);
 router.put('/:id/members/:memberId/role', groupController.updateMemberRole);
 router.post('/:id/leave', groupController.leaveGroup);

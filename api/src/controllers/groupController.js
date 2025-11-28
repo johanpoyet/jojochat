@@ -191,48 +191,6 @@ const deleteGroup = async (req, res) => {
   }
 };
 
-const addMembers = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { members } = req.body;
-    const userId = req.user._id;
-
-    if (!members || !Array.isArray(members) || members.length === 0) {
-      return res.status(400).json({ error: 'Members array is required' });
-    }
-
-    const group = await Group.findById(id);
-    if (!group) {
-      return res.status(404).json({ error: 'Group not found' });
-    }
-
-    if (!group.canManageMembers(userId)) {
-      return res.status(403).json({ error: 'Not authorized to add members' });
-    }
-
-    const existingMemberIds = group.members.map(m => m.user.toString());
-    const newMemberIds = members.filter(id => !existingMemberIds.includes(id));
-
-    const validUsers = await User.find({ _id: { $in: newMemberIds } });
-    if (validUsers.length !== newMemberIds.length) {
-      return res.status(400).json({ error: 'Some users are invalid' });
-    }
-
-    newMemberIds.forEach(memberId => {
-      group.members.push({ user: memberId, role: 'member', addedBy: userId });
-    });
-
-    await group.save();
-
-    const populatedGroup = await Group.findById(group._id)
-      .populate('members.user', 'username avatar status');
-
-    res.json({ members: populatedGroup.members });
-  } catch (error) {
-    res.status(500).json({ error: 'Server error' });
-  }
-};
-
 const removeMember = async (req, res) => {
   try {
     const { id, memberId } = req.params;
@@ -252,9 +210,12 @@ const removeMember = async (req, res) => {
       return res.status(400).json({ error: 'Cannot remove the creator' });
     }
 
+    // Only the creator can remove members (except members can remove themselves)
     const isRemovingSelf = memberId === userId.toString();
-    if (!isRemovingSelf && !group.canManageMembers(userId)) {
-      return res.status(403).json({ error: 'Not authorized to remove members' });
+    const isCreator = group.creator.toString() === userId.toString();
+
+    if (!isRemovingSelf && !isCreator) {
+      return res.status(403).json({ error: 'Only the group creator can remove members' });
     }
 
     group.members = group.members.filter(m => m.user.toString() !== memberId);
@@ -423,16 +384,77 @@ const archiveGroup = async (req, res) => {
   }
 };
 
+const addMember = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { userId: userToAddId } = req.body;
+    const requesterId = req.user._id;
+
+    const group = await Group.findById(id);
+    if (!group) {
+      return res.status(404).json({ error: 'Group not found' });
+    }
+
+    // Check if requester is a member of the group
+    if (!group.isMember(requesterId)) {
+      return res.status(403).json({ error: 'Only group members can add new members' });
+    }
+
+    // Check if user to add exists
+    const userToAdd = await User.findById(userToAddId);
+    if (!userToAdd) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Check if user is already a member
+    const isAlreadyMember = group.members.some(m => m.user.toString() === userToAddId);
+    if (isAlreadyMember) {
+      return res.status(400).json({ error: 'User is already a member of this group' });
+    }
+
+    // Add the new member
+    group.members.push({
+      user: userToAddId,
+      role: 'member',
+      addedBy: requesterId
+    });
+
+    await group.save();
+
+    const populatedGroup = await Group.findById(group._id)
+      .populate('creator', 'username avatar')
+      .populate('members.user', 'username avatar status');
+
+    // Emit socket event to notify all members including the new one
+    const io = req.app.get('io');
+    if (io) {
+      io.emit('group-member-added', {
+        groupId: id,
+        group: populatedGroup,
+        newMemberId: userToAddId
+      });
+    }
+
+    res.json({
+      message: 'Member added successfully',
+      group: populatedGroup
+    });
+  } catch (error) {
+    console.error('Add member error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
 module.exports = {
   createGroup,
   getGroups,
   getGroup,
   updateGroup,
   deleteGroup,
-  addMembers,
   removeMember,
   updateMemberRole,
   leaveGroup,
   getGroupMembers,
-  archiveGroup
+  archiveGroup,
+  addMember
 };

@@ -245,7 +245,7 @@ const addUserToGroup = async (userId, username) => {
           </div>
 
           <button
-            v-if="isCurrentUserCreator && member.role !== 'creator' && member._id !== authStore.user?.id"
+            v-if="isCurrentUserCreator && member._id !== authStore.user?.id"
             @click="removeMember(member._id, member.username)"
             class="btn-remove"
           >

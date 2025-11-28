@@ -221,6 +221,15 @@ const removeMember = async (req, res) => {
     group.members = group.members.filter(m => m.user.toString() !== memberId);
     await group.save();
 
+    // Emit socket event to notify the removed member
+    const io = req.app.get('io');
+    if (io) {
+      io.emit('group-member-removed', {
+        groupId: id,
+        removedMemberId: memberId
+      });
+    }
+
     res.json({ message: 'Member removed successfully' });
   } catch (error) {
     res.status(500).json({ error: 'Server error' });

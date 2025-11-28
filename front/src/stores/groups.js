@@ -295,6 +295,56 @@ export const useGroupsStore = defineStore('groups', () => {
       }
     })
 
+    // Listen for member being removed from a group
+    authStore.socket.on('group-member-removed', (data) => {
+      console.log('Group member removed event received:', data)
+      const { groupId, removedMemberId } = data
+
+      // If the current user was removed, remove the group from their list
+      if (removedMemberId === userId || removedMemberId.toString() === userId.toString()) {
+        console.log('Current user was removed from group, removing from list')
+        groups.value = groups.value.filter(g => g._id !== groupId)
+
+        // If this was the currently selected group, clear the selection
+        if (currentGroup.value?._id === groupId) {
+          currentGroup.value = null
+        }
+      }
+    })
+
+    // Listen for member being added to a group
+    authStore.socket.on('group-member-added', (data) => {
+      console.log('Group member added event received:', data)
+      const { group, newMemberId } = data
+
+      // If the current user was added, add the group to their list
+      if (newMemberId === userId || newMemberId.toString() === userId.toString()) {
+        console.log('Current user was added to group, adding to list')
+
+        // Check if group already exists in the list
+        const exists = groups.value.some(g => g._id === group._id)
+        if (!exists) {
+          // Format the group data to match the expected structure
+          const formattedGroup = {
+            _id: group._id,
+            name: group.name,
+            description: group.description,
+            avatar: group.avatar,
+            creator: group.creator,
+            members: group.members,
+            lastMessage: null,
+            unreadCount: 0,
+            archived: false,
+            settings: group.settings,
+            isActive: group.isActive,
+            createdAt: group.createdAt,
+            updatedAt: group.updatedAt
+          }
+          groups.value.unshift(formattedGroup)
+        }
+      }
+    })
+
     // Listen for new group messages
     authStore.socket.on('new-group-message', (data) => {
       const { group_id, message } = data

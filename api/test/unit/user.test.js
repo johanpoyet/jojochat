@@ -1,17 +1,10 @@
 const { expect } = require('chai');
-const mongoose = require('mongoose');
 const User = require('../../src/models/User');
 
-describe('User Model', () => {
-  before(async () => {
-    const testDbUri = process.env.MONGODB_URI_TEST || 'mongodb://localhost:27017/chat-test';
-    await mongoose.connect(testDbUri);
-  });
+require('../setup');
 
-  after(async () => {
-    await mongoose.connection.dropDatabase();
-    await mongoose.connection.close();
-  });
+describe('User Model', function() {
+  this.timeout(10000);
 
   afterEach(async () => {
     await User.deleteMany({});

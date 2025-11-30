@@ -64,14 +64,15 @@ describe('Session Model', function() {
       const mockReq = {
         ip: '127.0.0.1',
         headers: {
-          'user-agent': 'Mozilla/5.0 Mobile Safari'
+          'user-agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15'
         }
       };
 
       const session = await Session.createSession(
         user._id,
         'test-token',
-        mockReq
+        mockReq,
+        7
       );
 
       expect(session.device).to.equal('mobile');

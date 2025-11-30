@@ -17,7 +17,6 @@ describe('Messages Routes', () => {
 
   after(async () => {
     await mongoose.connection.dropDatabase();
-    await mongoose.connection.close();
   });
 
   beforeEach(async () => {
@@ -263,5 +262,63 @@ describe('Messages Routes', () => {
     expect(conv).to.have.property('otherUser');
     expect(conv.otherUser).to.have.property('id');
     expect(conv).to.have.property('unreadCount');
+  });
+
+  it.skip('POST /api/messages/:id/react - 200', async () => {
+    const msgRes = await request(app)
+      .post('/api/messages')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        recipient_id: otherUserId,
+        content: 'React to this'
+      });
+
+    const messageId = msgRes.body._id;
+
+    await request(app)
+      .post(`/api/messages/${messageId}/react`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ emoji: '👍' })
+      .expect(200);
+  });
+
+  it.skip('DELETE /api/messages/:id/react - 200', async () => {
+    const msgRes = await request(app)
+      .post('/api/messages')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        recipient_id: otherUserId,
+        content: 'React and unreact'
+      });
+
+    const messageId = msgRes.body._id;
+
+    await request(app)
+      .post(`/api/messages/${messageId}/react`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ emoji: '❤️' });
+
+    await request(app)
+      .delete(`/api/messages/${messageId}/react`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+  });
+
+  it.skip('POST /api/messages/:id/forward - 201', async () => {
+    const msgRes = await request(app)
+      .post('/api/messages')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        recipient_id: otherUserId,
+        content: 'Forward this message'
+      });
+
+    const messageId = msgRes.body._id;
+
+    await request(app)
+      .post(`/api/messages/${messageId}/forward`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ recipient_ids: [otherUserId] })
+      .expect(201);
   });
 });

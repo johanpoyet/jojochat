@@ -17,7 +17,6 @@ describe('Notifications Routes', () => {
 
   after(async () => {
     await mongoose.connection.dropDatabase();
-    await mongoose.connection.close();
   });
 
   beforeEach(async () => {

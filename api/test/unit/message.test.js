@@ -1,20 +1,12 @@
 const { expect } = require('chai');
-const mongoose = require('mongoose');
 const User = require('../../src/models/User');
 const Message = require('../../src/models/Message');
 
+require('../setup');
+
 describe('Message Model', () => {
-  let sender, recipient;
-
-  before(async () => {
-    const testDbUri = process.env.MONGODB_URI_TEST || 'mongodb://localhost:27017/chat-test';
-    await mongoose.connect(testDbUri);
-  });
-
-  after(async () => {
-    await mongoose.connection.dropDatabase();
-    await mongoose.connection.close();
-  });
+  let sender;
+  let recipient;
 
   beforeEach(async () => {
     sender = await User.create({
@@ -28,11 +20,6 @@ describe('Message Model', () => {
       username: 'recipient',
       password: 'password123'
     });
-  });
-
-  afterEach(async () => {
-    await Message.deleteMany({});
-    await User.deleteMany({});
   });
 
   describe('Validation', () => {

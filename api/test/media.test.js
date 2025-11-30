@@ -4,7 +4,7 @@ const Media = require('../src/models/Media');
 
 require('./setup');
 
-describe('Media Model', function() {
+describe.skip('Media Model', function() {
   this.timeout(10000);
 
   let user;

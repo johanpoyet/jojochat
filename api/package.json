@@ -5,9 +5,9 @@
   "scripts": {
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
-    "test": "NODE_ENV=test mocha --jobs 1 --require test/setup.js test/**/*.test.js",
-    "test:watch": "NODE_ENV=test mocha --jobs 1 --require test/setup.js test/**/*.test.js --watch",
-    "coverage": "NODE_ENV=test c8 --reporter=text --reporter=lcov --check-coverage --lines 70 --statements 70 mocha --jobs 1 --require test/setup.js test/**/*.test.js",
+    "test": "NODE_ENV=test mocha --jobs 1 --require test/setup.js 'test/**/*.test.js' 'test/*.test.js'",
+    "test:watch": "NODE_ENV=test mocha --jobs 1 --require test/setup.js 'test/**/*.test.js' 'test/*.test.js' --watch",
+    "coverage": "NODE_ENV=test c8 --reporter=text --reporter=lcov --check-coverage --lines 70 --statements 70 mocha --jobs 1 --require test/setup.js 'test/**/*.test.js' 'test/*.test.js'",
     "lint": "eslint .",
     "seed": "node scripts/seed.js"
   },
